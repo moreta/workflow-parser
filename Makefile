@@ -10,4 +10,4 @@ cmd/parser: cmd/main.go
 	go build -o $@ $<
 
 clean:
-	rm cmd/parser
+	rm -f cmd/parser
