@@ -31,6 +31,6 @@ To run the tests and build a command-line binary that validates workflow
 files, run `make`.  The resulting validation binary works like so:
 
 ```
-$ ./bin/parser foo.workflow
-foo.workflow is a valid file with 9 actions and 1 workflow
+$ ./cmd/parser samples/a.workflow 
+samples/a.workflow is a valid file with 9 actions and 1 workflow
 ```
