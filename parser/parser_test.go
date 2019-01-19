@@ -633,6 +633,6 @@ func assertParseSuccess(t *testing.T, err error, nactions int, nflows int, workf
 	assert.Equal(t, nflows, len(workflow.Workflows), "workflows")
 }
 
-func parseString(launchFile string) (*Configuration, error) {
-	return Parse(strings.NewReader(launchFile))
+func parseString(workflowFile string) (*Configuration, error) {
+	return Parse(strings.NewReader(workflowFile))
 }
