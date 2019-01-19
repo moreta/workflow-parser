@@ -15,7 +15,7 @@ func IsMatchingEventType(flowOn, eventType string) bool {
 	return strings.ToLower(flowOn) == strings.ToLower(eventType)
 }
 
-// https://github.com/github/project-everett/blob/master/docs/events.md
+// https://developer.github.com/actions/creating-workflows/workflow-configuration-options/#events-supported-in-workflow-files
 var eventTypeWhitelist = map[string]struct{}{
 	"check_run":                   {},
 	"check_suite":                 {},
