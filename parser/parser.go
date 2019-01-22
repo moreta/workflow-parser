@@ -12,70 +12,87 @@ import (
 	hclparser "github.com/hashicorp/hcl/hcl/parser"
 	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/soniakeys/graph"
+	"github.com/github/actions-parser/model"
 )
 
 const minVersion = 0
 const maxVersion = 0
 const maxSecrets = 100
 
+type parseState struct {
+  Version   int
+  Actions   []*model.Action
+  Workflows []*model.Workflow
+  Errors    ErrorList
+
+  posMap map[interface{}]ast.Node
+}
+
 // Parse parses a .workflow file and return the actions and global variables found within.
 //
 // Parameters:
 //  - reader - an opened main.workflow file
 //
-// Returns: a Configuration
+// Returns: a model.Configuration
 //
 // A note about error handling: although Parse returns an error, the only
 // errors handled that way are genuine surprises like I/O errors.  Parse
 // errors are all handled by being appended to the Errors field of the
-// returned Configuration object.  The caller can enumerate all errors and
-// filter them by severity to see if it makes sense to proceed with
-// displaying or executing the workflows in the file.
-func Parse(reader io.Reader) (*Configuration, error) {
+// returned model.Configuration object.  The caller can enumerate all
+// errors and filter them by severity to see if it makes sense to proceed
+// with displaying or executing the workflows in the file.
+func Parse(reader io.Reader) (*model.Configuration, ErrorList, error) {
 	// FIXME - check context for deadline?
 	b, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	root, err := hcl.ParseBytes(b)
 	if err != nil {
 		if posError, ok := err.(*hclparser.PosError); ok {
-			return &Configuration{Errors: []*Error{
+			return &model.Configuration{}, ErrorList{
 				newError(
 					ErrorPos{File: posError.Pos.Filename, Line: posError.Pos.Line, Column: posError.Pos.Column},
-					posError.Err.Error())}}, nil
+					posError.Err.Error())}, nil
 		}
-		return &Configuration{Errors: []*Error{
-			newError(ErrorPos{}, err.Error())}}, nil
+		return &model.Configuration{}, ErrorList{
+			newError(ErrorPos{}, err.Error())}, nil
 	}
 
-	return ParseHCL(root.Node), nil
+	parseState := parseAndValidate(root.Node)
+	return &model.Configuration{
+		Version:   parseState.Version,
+		Actions:   parseState.Actions,
+		Workflows: parseState.Workflows,
+	}, parseState.Errors, nil
 }
 
-// ParseHCL converts a HCL AST into a Configuration
+// parseAndValidate converts a HCL AST into a parseState and validates
+// high-level structure.
 // Parameters:
 //  - root - the contents of a .workflow file, as AST
 // Returns:
-//  - a Configuration structure containing actions and workflow definitions
-func ParseHCL(root ast.Node) *Configuration {
-	c := buildConfiguration(root)
+//  - a parseState structure containing actions and workflow definitions
+func parseAndValidate(root ast.Node) *parseState {
+	c := parseOnly(root)
 	c.validate()
-	c.SortErrors()
+	c.Errors.sort()
 
 	return c
 }
 
-// buildConfiguration traverses the AST of a HCL and constructs a Configuration
-// instance.
+// parseOnly traverses the AST of a HCL and constructs a parseState.
+// Syntax and low-level semantic errors are flagged, but file-level
+// structural properties are not checked.
 //
 // Parameters:
 //  - root - the contents of a .workflow file, as []byte
 // Returns:
-//  - a Configuration structure containing actions, workflow definitions, and global
+//  - a parseState structure containing actions, workflow definitions, and global
 //    variables
-func buildConfiguration(root ast.Node) *Configuration {
-	c := &Configuration{
+func parseOnly(root ast.Node) *parseState {
+	c := &parseState{
 		posMap: make(map[interface{}]ast.Node),
 	}
 	c.parseRoot(root)
@@ -83,7 +100,7 @@ func buildConfiguration(root ast.Node) *Configuration {
 	return c
 }
 
-func (c *Configuration) validate() {
+func (c *parseState) validate() {
 	c.analyzeDependencies()
 	c.checkCircularDependencies()
 	c.checkActions()
@@ -105,7 +122,7 @@ func uniqStrings(items []string) []string {
 // checkCircularDependencies finds loops in the action graph.
 // It emits a fatal error for each cycle it finds, in the order (top to
 // bottom, left to right) they appear in the .workflow file.
-func (c *Configuration) checkCircularDependencies() {
+func (c *parseState) checkCircularDependencies() {
 	// make a map from action name to node ID, which is the index in the c.Actions array
 	// That is, c.Actions[actionmap[X]].Identifier == X
 	actionmap := make(map[string]graph.NI)
@@ -136,7 +153,7 @@ func (c *Configuration) checkCircularDependencies() {
 
 // checkActions returns error if any actions are syntactically correct but
 // have structural errors
-func (c *Configuration) checkActions() {
+func (c *parseState) checkActions() {
 	secrets := make(map[string]bool)
 	for _, t := range c.Actions {
 		// Ensure the Action has a `uses` attribute
@@ -183,7 +200,7 @@ func (c *Configuration) checkActions() {
 
 var envVarChecker = regexp.MustCompile(`\A[A-Za-z_][A-Za-z_0-9]*\z`)
 
-func (c *Configuration) checkEnvironmentVariable(key string, node ast.Node) {
+func (c *parseState) checkEnvironmentVariable(key string, node ast.Node) {
 	if key != "GITHUB_TOKEN" && strings.HasPrefix(key, "GITHUB_") {
 		c.Errors = append(c.Errors, newWarning(posFromNode(node),
 			"Environment variables and secrets beginning with `GITHUB_' are reserved"))
@@ -196,7 +213,7 @@ func (c *Configuration) checkEnvironmentVariable(key string, node ast.Node) {
 
 // checkFlows appends an error if any workflows are syntactically correct but
 // have structural errors
-func (c *Configuration) checkFlows() {
+func (c *parseState) checkFlows() {
 	actionmap := makeActionMap(c.Actions)
 	for _, f := range c.Workflows {
 		// make sure there's an `on` attribute
@@ -204,7 +221,7 @@ func (c *Configuration) checkFlows() {
 			c.Errors = append(c.Errors, newError(posFromNode(c.posMap[f]),
 				"Workflow `%s' must have an `on' attribute", f.Identifier))
 			// continue, checking other workflows
-		} else if !IsAllowedEventType(f.On) {
+		} else if !model.IsAllowedEventType(f.On) {
 			c.Errors = append(c.Errors, newError(posFromNode(c.posMap[&f.On]),
 				"Workflow `%s' has unknown `on' value `%s'", f.Identifier, f.On))
 			// continue, checking other workflows
@@ -222,8 +239,8 @@ func (c *Configuration) checkFlows() {
 	}
 }
 
-func makeActionMap(actions []*Action) map[string]*Action {
-	actionmap := make(map[string]*Action)
+func makeActionMap(actions []*model.Action) map[string]*model.Action {
+	actionmap := make(map[string]*model.Action)
 	for _, action := range actions {
 		actionmap[action.Identifier] = action
 	}
@@ -235,7 +252,7 @@ func makeActionMap(actions []*Action) map[string]*Action {
 //
 // c.Actions is an array of Action objects, as parsed.  The Action objects in
 // this array are mutated, by setting Action.dependencies for each.
-func (c *Configuration) analyzeDependencies() {
+func (c *parseState) analyzeDependencies() {
 	actionmap := makeActionMap(c.Actions)
 	for _, action := range c.Actions {
 		// analyze explicit dependencies for each "needs" keyword
@@ -250,7 +267,7 @@ func (c *Configuration) analyzeDependencies() {
 	}
 }
 
-func (c *Configuration) analyzeNeeds(action *Action, actionmap map[string]*Action) {
+func (c *parseState) analyzeNeeds(action *model.Action, actionmap map[string]*model.Action) {
 	for _, need := range action.Needs {
 		_, ok := actionmap[need]
 		if !ok {
@@ -268,7 +285,7 @@ func (c *Configuration) analyzeNeeds(action *Action, actionmap map[string]*Actio
 // if it's not an object, or it has non-assignment attributes, or if any
 // of its values are anything other than a string, the function appends an
 // appropriate error.
-func (c *Configuration) literalToStringMap(node ast.Node) map[string]string {
+func (c *parseState) literalToStringMap(node ast.Node) map[string]string {
 	obj, ok := node.(*ast.ObjectType)
 
 	if !ok {
@@ -299,7 +316,7 @@ func (c *Configuration) literalToStringMap(node ast.Node) map[string]string {
 	return ret
 }
 
-func (c *Configuration) identString(t token.Token) string {
+func (c *parseState) identString(t token.Token) string {
 	switch t.Type {
 	case token.STRING:
 		return t.Value().(string)
@@ -322,7 +339,7 @@ func (c *Configuration) identString(t token.Token) string {
 // If promoteScalars is true, then values that are scalar strings are
 // promoted to a single-entry string array.  E.g., "foo" becomes the Go
 // expression []string{ "foo" }.
-func (c *Configuration) literalToStringArray(node ast.Node, promoteScalars bool) ([]string, bool) {
+func (c *parseState) literalToStringArray(node ast.Node, promoteScalars bool) ([]string, bool) {
 	literal, ok := node.(*ast.LiteralType)
 	if ok {
 		if promoteScalars && literal.Token.Type == token.STRING {
@@ -352,7 +369,7 @@ func (c *Configuration) literalToStringArray(node ast.Node, promoteScalars bool)
 // literalToString converts a literal value from the AST into a string.
 // If the value isn't a scalar or isn't a string, the function appends an
 // appropriate error and returns "", false.
-func (c *Configuration) literalToString(node ast.Node) (string, bool) {
+func (c *parseState) literalToString(node ast.Node) (string, bool) {
 	val := c.literalCast(node, token.STRING)
 	if val == nil {
 		return "", false
@@ -365,7 +382,7 @@ func (c *Configuration) literalToString(node ast.Node) (string, bool) {
 // Exponents (1e6) and floats (123.456) generate errors.
 // If the value isn't a scalar or isn't a number, the function appends an
 // appropriate error and returns 0, false.
-func (c *Configuration) literalToInt(node ast.Node) (int64, bool) {
+func (c *parseState) literalToInt(node ast.Node) (int64, bool) {
 	val := c.literalCast(node, token.NUMBER)
 	if val == nil {
 		return 0, false
@@ -373,7 +390,7 @@ func (c *Configuration) literalToInt(node ast.Node) (int64, bool) {
 	return val.(int64), true
 }
 
-func (c *Configuration) literalCast(node ast.Node, t token.Type) interface{} {
+func (c *parseState) literalCast(node ast.Node, t token.Type) interface{} {
 	literal, ok := node.(*ast.LiteralType)
 	if !ok {
 		c.Errors = append(c.Errors, newError(posFromNode(node),
@@ -392,7 +409,7 @@ func (c *Configuration) literalCast(node ast.Node, t token.Type) interface{} {
 
 // parseRoot parses the root of the AST, filling in c.Version, c.Actions,
 // and c.Workflows.
-func (c *Configuration) parseRoot(node ast.Node) {
+func (c *parseState) parseRoot(node ast.Node) {
 	objectList, ok := node.(*ast.ObjectList)
 	if !ok {
 		// It should be impossible for HCL to return anything other than an
@@ -401,8 +418,8 @@ func (c *Configuration) parseRoot(node ast.Node) {
 		return
 	}
 
-	c.Actions = make([]*Action, 0, len(objectList.Items))
-	c.Workflows = make([]*Workflow, 0, len(objectList.Items))
+	c.Actions = make([]*model.Action, 0, len(objectList.Items))
+	c.Workflows = make([]*model.Workflow, 0, len(objectList.Items))
 	identifiers := make(map[string]bool)
 	for idx, item := range objectList.Items {
 		if item.Assign.IsValid() {
@@ -415,7 +432,7 @@ func (c *Configuration) parseRoot(node ast.Node) {
 
 // parseBlock parses a single, top-level "action" or "workflow" block,
 // appending it to c.Actions or c.Workflows as appropriate.
-func (c *Configuration) parseBlock(item *ast.ObjectItem, identifiers map[string]bool) {
+func (c *parseState) parseBlock(item *ast.ObjectItem, identifiers map[string]bool) {
 	if len(item.Keys) != 2 {
 		c.Errors = append(c.Errors, newError(posFromNode(item), "Invalid toplevel declaration"))
 		return
@@ -451,7 +468,7 @@ func (c *Configuration) parseBlock(item *ast.ObjectItem, identifiers map[string]
 
 // parseVersion parses a top-level `version=N` statement, filling in
 // c.Version.
-func (c *Configuration) parseVersion(idx int, item *ast.ObjectItem) {
+func (c *parseState) parseVersion(idx int, item *ast.ObjectItem) {
 	if len(item.Keys) != 1 || c.identString(item.Keys[0].Token) != "version" {
 		// not a valid `version` declaration
 		c.Errors = append(c.Errors, newError(posFromNode(item.Val), "Toplevel declarations cannot be assignments"))
@@ -474,7 +491,7 @@ func (c *Configuration) parseVersion(idx int, item *ast.ObjectItem) {
 
 // parseIdentifier parses the double-quoted identifier (name) for a
 // "workflow" or "action" block.
-func (c *Configuration) parseIdentifier(key *ast.ObjectKey) string {
+func (c *parseState) parseIdentifier(key *ast.ObjectKey) string {
 	id := key.Token.Text
 	if len(id) < 3 || id[0] != '"' || id[len(id)-1] != '"' {
 		c.Errors = append(c.Errors, newError(posFromNode(key), "Invalid format for identifier `%s'", id))
@@ -485,7 +502,7 @@ func (c *Configuration) parseIdentifier(key *ast.ObjectKey) string {
 
 // parseRequiredString parses a string value, setting its value into the
 // out-parameter `value` and returning true if successful.
-func (c *Configuration) parseRequiredString(value *string, val ast.Node, nodeType, name, id string) bool {
+func (c *parseState) parseRequiredString(value *string, val ast.Node, nodeType, name, id string) bool {
 	if *value != "" {
 		c.Errors = append(c.Errors, newWarning(posFromNode(val), "`%s' redefined in %s `%s'", name, nodeType, id))
 		// continue, allowing the redefinition
@@ -510,7 +527,7 @@ func (c *Configuration) parseRequiredString(value *string, val ast.Node, nodeTyp
 
 // parseBlockPreamble parses the beginning of a "workflow" or "action"
 // block.
-func (c *Configuration) parseBlockPreamble(item *ast.ObjectItem, nodeType string) (string, *ast.ObjectType) {
+func (c *parseState) parseBlockPreamble(item *ast.ObjectItem, nodeType string) (string, *ast.ObjectType) {
 	id := c.parseIdentifier(item.Keys[1])
 	if id == "" {
 		return "", nil
@@ -529,13 +546,13 @@ func (c *Configuration) parseBlockPreamble(item *ast.ObjectItem, nodeType string
 }
 
 // actionifyItem converts an AST block to an Action object.
-func (c *Configuration) actionifyItem(item *ast.ObjectItem) *Action {
+func (c *parseState) actionifyItem(item *ast.ObjectItem) *model.Action {
 	id, obj := c.parseBlockPreamble(item, "action")
 	if obj == nil {
 		return nil
 	}
 
-	action := &Action{
+	action := &model.Action{
 		Identifier: id,
 	}
 	c.posMap[action] = item
@@ -553,7 +570,7 @@ func (c *Configuration) actionifyItem(item *ast.ObjectItem) *Action {
 // It also has higher-than-normal cyclomatic complexity, so we ask the
 // gocyclo linter to ignore it.
 // nolint: gocyclo
-func (c *Configuration) parseActionAttribute(name string, action *Action, val ast.Node) {
+func (c *parseState) parseActionAttribute(name string, action *model.Action, val ast.Node) {
 	switch name {
 	case "uses":
 		c.parseUses(action, val)
@@ -586,7 +603,7 @@ func (c *Configuration) parseActionAttribute(name string, action *Action, val as
 
 // parseUses sets the action.Uses value based on the contents of the AST
 // node.  This function enforces formatting requirements on the value.
-func (c *Configuration) parseUses(action *Action, node ast.Node) {
+func (c *parseState) parseUses(action *model.Action, node ast.Node) {
 	if action.Uses.Path != "" {
 		c.Errors = append(c.Errors, newWarning(posFromNode(node),
 			"`uses' redefined in action `%s'", action.Identifier))
@@ -639,7 +656,7 @@ func (c *Configuration) parseUses(action *Action, node ast.Node) {
 // parseUses sets the action.Runs or action.Command value based on the
 // contents of the AST node.  This function enforces formatting
 // requirements on the value.
-func (c *Configuration) parseCommand(action *Action, dest *ActionCommand, name string, node ast.Node, allowBlank bool) {
+func (c *parseState) parseCommand(action *model.Action, dest *model.ActionCommand, name string, node ast.Node, allowBlank bool) {
 	if len(dest.Parsed) > 0 {
 		c.Errors = append(c.Errors, newWarning(posFromNode(node),
 			"`%s' redefined in action `%s'", name, action.Identifier))
@@ -685,14 +702,14 @@ func typename(val interface{}) string {
 }
 
 // workflowifyItem converts an AST block to a Workflow object.
-func (c *Configuration) workflowifyItem(item *ast.ObjectItem) *Workflow {
+func (c *parseState) workflowifyItem(item *ast.ObjectItem) *model.Workflow {
 	id, obj := c.parseBlockPreamble(item, "workflow")
 	if obj == nil {
 		return nil
 	}
 
 	var ok bool
-	workflow := &Workflow{Identifier: id}
+	workflow := &model.Workflow{Identifier: id}
 	for _, item := range obj.List.Items {
 		name := c.identString(item.Keys[0].Token)
 
@@ -732,7 +749,7 @@ func isAssignment(item *ast.ObjectItem) bool {
 
 // checkAssignmentsOnly ensures that all elements in the object are "key =
 // value" pairs.
-func (c *Configuration) checkAssignmentsOnly(objectList *ast.ObjectList, actionID string) {
+func (c *parseState) checkAssignmentsOnly(objectList *ast.ObjectList, actionID string) {
 	for _, item := range objectList.Items {
 		if !isAssignment(item) {
 			var desc string
