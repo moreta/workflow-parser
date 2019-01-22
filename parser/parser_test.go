@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/github/actions-parser/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/github/actions-parser/model"
 )
 
 func TestParseEmptyConfig(t *testing.T) {
@@ -649,7 +649,6 @@ func TestUsesForm(t *testing.T) {
 		})
 	}
 }
-
 
 /********** helpers **********/
 

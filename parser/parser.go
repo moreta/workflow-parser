@@ -7,12 +7,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/github/actions-parser/model"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	hclparser "github.com/hashicorp/hcl/hcl/parser"
 	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/soniakeys/graph"
-	"github.com/github/actions-parser/model"
 )
 
 const minVersion = 0
@@ -20,12 +20,12 @@ const maxVersion = 0
 const maxSecrets = 100
 
 type parseState struct {
-  Version   int
-  Actions   []*model.Action
-  Workflows []*model.Workflow
-  Errors    ErrorList
+	Version   int
+	Actions   []*model.Action
+	Workflows []*model.Workflow
+	Errors    ErrorList
 
-  posMap map[interface{}]ast.Node
+	posMap map[interface{}]ast.Node
 }
 
 // Parse parses a .workflow file and return the actions and global variables found within.
