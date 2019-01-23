@@ -54,9 +54,11 @@ action "goal1" {
 
   # The "uses" keyword identifies what actual code this action will run.
   # The value is always a string, and may take three forms:
-  #   - "./path", which identifies a Dockerfile in the current repository
-  #   - "owner/repo/path@ref", which identifies a Dockerfile in another
-  #     GitHub repository.  Ref may be a branch, tag, or SHA.
+  #   - "./path", which identifies a directory in the current repository
+  #     containing a Dockerfile that describes an action
+  #   - "owner/repo/path@ref", which identifies a directory in another
+  #     GitHub repository containing a Dockerfile that describes an
+  #     action.  Ref may be a branch, tag, or SHA.
   #   - "docker://image", which identifies a docker image
   uses = "docker://alpine"
   # or: uses = "./local-directory"
