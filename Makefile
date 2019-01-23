@@ -4,7 +4,7 @@ dep:
 	dep ensure
 
 test:
-	go test ./parser
+	go test ./parser ./model
 
 cmd/parser: cmd/main.go
 	go build -o $@ $<
