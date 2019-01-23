@@ -14,7 +14,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	for _, fn := range(os.Args[1:]) {
+	for _, fn := range os.Args[1:] {
 		parseFile(fn)
 	}
 }
@@ -42,8 +42,8 @@ func parseFile(fn string) {
 
 func plural(n int, s string) string {
 	if n == 1 {
-		return fmt.Sprintf("%d %s", n, s);
+		return fmt.Sprintf("%d %s", n, s)
 	} else {
-		return fmt.Sprintf("%d %ss", n, s);
+		return fmt.Sprintf("%d %ss", n, s)
 	}
 }
