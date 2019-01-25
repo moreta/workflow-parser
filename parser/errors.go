@@ -7,6 +7,15 @@ import (
 	"strings"
 )
 
+type ParserError struct {
+	message string
+	errors  ErrorList
+}
+
+func (p *ParserError) Error() string {
+	return p.message
+}
+
 // Error represents an error identified by the parser, either syntactic
 // (HCL) or semantic (.workflow) in nature.  There are fields for location
 // (File, Line, Column), severity, and base error string.  The `Error()`

@@ -673,7 +673,7 @@ func assertParseSuccess(t *testing.T, errlist []*Error, err error, nactions int,
 }
 
 func assertParseError(t *testing.T, errlist []*Error, err error, nactions int, nflows int, workflow *model.Configuration, errors ...string) {
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	require.Nil(t, workflow)
 
 	for _, e := range errlist {
