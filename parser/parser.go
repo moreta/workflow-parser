@@ -56,8 +56,7 @@ func Parse(reader io.Reader) (*model.Configuration, ErrorList, error) {
 					ErrorPos{File: posError.Pos.Filename, Line: posError.Pos.Line, Column: posError.Pos.Column},
 					posError.Err.Error())}, nil
 		}
-		return &model.Configuration{}, ErrorList{
-			newError(ErrorPos{}, err.Error())}, nil
+		return nil, nil, err
 	}
 
 	parseState := parseAndValidate(root.Node)
