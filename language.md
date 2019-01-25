@@ -120,7 +120,7 @@ action "goal2" {
 
 The below is an [ANTLR4](https://github.com/antlr/antlr4) grammar specifying the Actions Workflow language. As a spec, it is likely not the best basis for a real parser. For instance, no effort has been made to make the grammar output intuitive errors.
 
-```
+```g4
 grammar workflow;
 
 workflow_file : version? (workflow | action)* ;
