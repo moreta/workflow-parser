@@ -675,18 +675,22 @@ func assertParseSuccess(t *testing.T, errlist []*Error, err error, nactions int,
 func assertParseError(t *testing.T, errlist []*Error, err error, nactions int, nflows int, workflow *model.Configuration, errors ...string) {
 	assert.Error(t, err)
 	require.Nil(t, workflow)
+	require.Nil(t, errlist)
 
-	for _, e := range errlist {
-		t.Log(e)
-		assert.NotEqual(t, 0, e.Pos.Line, "error position not set")
-	}
-	assert.Equal(t, len(errors), len(errlist), "errors")
-	for i := range errors {
-		if i >= len(errlist) {
-			break
+	if pe, ok := err.(*ParserError); ok {
+		for _, e := range pe.Errors {
+			t.Log(e)
+			assert.NotEqual(t, 0, e.Pos.Line, "error position not set")
 		}
-		assert.Contains(t, strings.ToLower(errlist[i].Error()), errors[i])
+		assert.Equal(t, len(errors), len(pe.Errors), "errors")
+		for i := range errors {
+			if i >= len(pe.Errors) {
+				break
+			}
+			assert.Contains(t, strings.ToLower(pe.Errors[i].Error()), errors[i])
+		}
 	}
+
 }
 
 func parseString(workflowFile string) (*model.Configuration, []*Error, error) {

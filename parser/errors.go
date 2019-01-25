@@ -9,7 +9,7 @@ import (
 
 type ParserError struct {
 	message string
-	errors  ErrorList
+	Errors  ErrorList
 }
 
 func (p *ParserError) Error() string {

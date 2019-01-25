@@ -55,7 +55,7 @@ func Parse(reader io.Reader) (*model.Configuration, ErrorList, error) {
 				newError(
 					ErrorPos{File: posError.Pos.Filename, Line: posError.Pos.Line, Column: posError.Pos.Column},
 					posError.Err.Error())}
-			return nil, errors, &ParserError{message: posError.Err.Error(), errors: errors}
+			return nil, nil, &ParserError{message: posError.Err.Error(), Errors: errors}
 		}
 		return nil, nil, err
 	}
