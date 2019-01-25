@@ -98,15 +98,15 @@ func TestActionCollision(t *testing.T) {
 
 func TestBadHCL(t *testing.T) {
 	workflow, errlist, err := parseString(`this is definitely not valid HCL!`)
-	assertParseSuccess(t, errlist, err, 0, 0, workflow, "illegal char")
+	assertParseError(t, errlist, err, 0, 0, workflow, "illegal char")
 	workflow, errlist, err = parseString(`action "foo"`)
-	assertParseSuccess(t, errlist, err, 0, 0, workflow, "expected start of object ('{') or assignment ('=')")
+	assertParseError(t, errlist, err, 0, 0, workflow, "expected start of object ('{') or assignment ('=')")
 	workflow, errlist, err = parseString(`action "foo" {`)
-	assertParseSuccess(t, errlist, err, 0, 0, workflow, "object expected closing rbrace got: eof")
+	assertParseError(t, errlist, err, 0, 0, workflow, "object expected closing rbrace got: eof")
 	workflow, errlist, err = parseString(`action "foo" { uses=" }`)
-	assertParseSuccess(t, errlist, err, 0, 0, workflow, "literal not terminated")
+	assertParseError(t, errlist, err, 0, 0, workflow, "literal not terminated")
 	workflow, errlist, err = parseString(`action "foo" { uses=""" }`)
-	assertParseSuccess(t, errlist, err, 0, 0, workflow, "literal not terminated")
+	assertParseError(t, errlist, err, 0, 0, workflow, "literal not terminated")
 }
 
 func TestCircularDependencySelf(t *testing.T) {
@@ -670,6 +670,23 @@ func assertParseSuccess(t *testing.T, errlist []*Error, err error, nactions int,
 
 	assert.Equal(t, nactions, len(workflow.Actions), "actions")
 	assert.Equal(t, nflows, len(workflow.Workflows), "workflows")
+}
+
+func assertParseError(t *testing.T, errlist []*Error, err error, nactions int, nflows int, workflow *model.Configuration, errors ...string) {
+	assert.NoError(t, err)
+	require.Nil(t, workflow)
+
+	for _, e := range errlist {
+		t.Log(e)
+		assert.NotEqual(t, 0, e.Pos.Line, "error position not set")
+	}
+	assert.Equal(t, len(errors), len(errlist), "errors")
+	for i := range errors {
+		if i >= len(errlist) {
+			break
+		}
+		assert.Contains(t, strings.ToLower(errlist[i].Error()), errors[i])
+	}
 }
 
 func parseString(workflowFile string) (*model.Configuration, []*Error, error) {
