@@ -1,18 +1,28 @@
 exports.lex = lex
 
+function countNewlines(str, start, end) {
+	var ret = 0
+	for (var i=start; i<end; i++)
+		if (str.charAt(i) == '\n') ret++
+	return ret
+}
+
 function lex(str) {
 	var ret = []
+	var linenum = 1
 	while (str != "") {
 		var match
 		// Skip whitespace
 		if (match = str.match(/^\s+/)) {
 			// console.log("whitespace: <" + match[0] + ">")
+			linenum += countNewlines(str, 0, match[0].length)
 			str = str.substring(match[0].length, str.length)
 		}
 
 		// Skip comments
 		else if (match = str.match(/^#.*\n/)) {
 			// console.log("comment: " + match[0].trim())
+			linenum += countNewlines(str, 0, match[0].length)
 			str = str.substring(match[0].length, str.length)
 		}
 
@@ -53,7 +63,7 @@ function lex(str) {
 						case '"':   val += '"';   break
 						case '\\':  val += '\\';  break
 						default:
-							ret.push(["ERROR", "illegal escape sequence: \"" + str.charAt(i) + "\""])
+							ret.push(["ERROR", "illegal escape sequence: \"" + str.charAt(i) + "\"", linenum])
 							return ret
 					}
 				}
@@ -67,16 +77,17 @@ function lex(str) {
 			var terminator = match[1]
 			var endpos = str.indexOf(terminator, match[0].length)
 			if (endpos == -1) {
-				ret.push(["ERROR", "missing heredoc terminator: \"" + terminator + "\""])
+				ret.push(["ERROR", "missing heredoc terminator: \"" + terminator + "\"", linenum])
 				return ret
 			}
 			ret.push(["STRING", str.substring(match[0].length, endpos)])
+			linenum += countNewlines(str, 0, endpos+terminator.length)
 			str = str.substring(endpos + terminator.length, str.length)
 		}
 
 		// Else fail
 		else {
-			ret.push(["ERROR", "illegal character: \"" + str.charAt(0) + "\""])
+			ret.push(["ERROR", "illegal character: \"" + str.charAt(0) + "\"", linenum])
 			return ret
 		}
 	}
