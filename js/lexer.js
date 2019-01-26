@@ -64,7 +64,6 @@ function lex(str) {
 						case '\\':  val += '\\';  break
 						default:
 							ret.push(["ERROR", "illegal escape sequence: \"" + str.charAt(i) + "\"", linenum])
-							return ret
 					}
 				}
 				else val += str.charAt(i)
