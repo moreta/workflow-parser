@@ -4,29 +4,40 @@ function lex(str) {
 	var ret = []
 	while (str != "") {
 		var match
+		// Skip whitespace
 		if (match = str.match(/^\s+/)) {
 			// console.log("whitespace: <" + match[0] + ">")
 			str = str.substring(match[0].length, str.length)
 		}
+
+		// Skip comments
 		else if (match = str.match(/^#.*\n/)) {
 			// console.log("comment: " + match[0].trim())
 			str = str.substring(match[0].length, str.length)
 		}
+
+		// Barewords
 		else if (match = str.match(/^[_a-zA-Z][_0-9a-zA-Z]*/)) {
 			// console.log("bareword: " + match[0])
 			ret.push(["BAREWORD", match[0]])
 			str = str.substring(match[0].length, str.length)
 		}
+
+		// Integers
 		else if (match = str.match(/^\d+/)) {
 			// console.log("integer: " + match[0])
 			ret.push(["INTEGER", parseInt(match[0], 10)])
 			str = str.substring(match[0].length, str.length)
 		}
+
+		// Single-character operators
 		else if (match = str.match(/^[={}\[\],]/)) {
 			// console.log("operator: " + match[0])
 			ret.push(["OPERATOR", match[0]])
 			str = str.substring(match[0].length, str.length)
 		}
+
+		// Strings, with escape characters
 		else if (str.charAt(0) == '"') {
 			var val = ""
 			for (var i=1; i<str.length; i++) {
@@ -50,6 +61,8 @@ function lex(str) {
 			}
 			ret.push(["STRING", val])
 		}
+
+		// Heredocs
 		else if (match = str.match(/^<<([_a-zA-Z][_0-9a-zA-Z]*)/)) {
 			var terminator = match[1]
 			var endpos = str.indexOf(terminator, match[0].length)
@@ -60,6 +73,8 @@ function lex(str) {
 			ret.push(["STRING", str.substring(match[0].length, endpos)])
 			str = str.substring(endpos + terminator.length, str.length)
 		}
+
+		// Else fail
 		else {
 			ret.push(["ERROR", "illegal character: \"" + str.charAt(0) + "\""])
 			return ret
