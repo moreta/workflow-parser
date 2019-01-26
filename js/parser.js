@@ -18,8 +18,7 @@ function parseWorkflowFile(tokens, ofs) {
 		ret.push(node)
 	}
 	if (ofs[0] != tokens.length) {
-		console.log("parser failure: expected top-level block, got " + tokens[ofs[0]])
-		ret.push(null)
+		return ["ERROR", "expected top-level block, got " + tokens[ofs[0]]]
 	}
 	return ret
 }
