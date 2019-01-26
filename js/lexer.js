@@ -27,11 +27,36 @@ function lex(str) {
 			ret.push(["OPERATOR", match[0]])
 			str = str.substr(match[0].length, str.length)
 		}
-		else if (match = str.match(/^"([^"]*)"/)) {
-			// FIXME: escape characters
-			// console.log("string: " + match[0])
-			ret.push(["STRING", match[1]])
-			str = str.substr(match[0].length, str.length)
+		else if (str.charAt(0) == '"') {
+			var val = ""
+			for (var i=1; i<str.length; i++) {
+				if (str.charAt(i) == '"') {
+					str = str.substring(i+1, str.length)
+					break;
+				}
+				if (str.charAt(i) == '\\') {
+					switch (str.charAt(++i)) {
+						case 'n':   val += '\n';  break
+						case 'r':   val += '\r';  break
+						case 't':   val += '\t';  break
+						case '"':   val += '"';   break
+						case '\\':  val += '\\';  break
+						default:
+							console.log("lexer failure at: " + str.substr(i, 25) + "...")
+					}
+				}
+				else val += str.charAt(i)
+			}
+			ret.push(["STRING", val])
+		}
+		else if (match = str.match(/^<<([_a-zA-Z][_0-9a-zA-Z]*)/)) {
+			var terminator = match[1]
+			var endpos = str.indexOf(terminator, match[0].length)
+			if (endpos == -1) {
+				console.log("lexer failure: missing heredoc terminator (" + terminator + ") at: " + str.substr(0, 25) + "...")
+			}
+			ret.push(["STRING", str.substring(match[0].length, endpos)])
+			str = str.substring(endpos + terminator.length, str.length)
 		}
 		else {
 			console.log("lexer failure at: " + str.substr(0, 25) + "...")
