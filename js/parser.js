@@ -166,8 +166,8 @@ function parseStringOrArray(tokens, ofs) {
 
 function eq(a1, a2) {
 	if (!a1 || !a2) return false
-	if (a1.length != a2.length) return false
-	for (var i=0; i<a1.length; i++) {
+	if (a1.length != 3 || a2.length != 2) return false
+	for (var i=0; i<2; i++) {
 		if (a1[i] != a2[i]) return false
 	}
 	return true

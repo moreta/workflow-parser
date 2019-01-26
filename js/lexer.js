@@ -29,21 +29,21 @@ function lex(str) {
 		// Barewords
 		else if (match = str.match(/^[_a-zA-Z][_0-9a-zA-Z]*/)) {
 			// console.log("bareword: " + match[0])
-			ret.push(["BAREWORD", match[0]])
+			ret.push(["BAREWORD", match[0], linenum])
 			str = str.substring(match[0].length, str.length)
 		}
 
 		// Integers
 		else if (match = str.match(/^\d+/)) {
 			// console.log("integer: " + match[0])
-			ret.push(["INTEGER", parseInt(match[0], 10)])
+			ret.push(["INTEGER", parseInt(match[0], 10), linenum])
 			str = str.substring(match[0].length, str.length)
 		}
 
 		// Single-character operators
 		else if (match = str.match(/^[={}\[\],]/)) {
 			// console.log("operator: " + match[0])
-			ret.push(["OPERATOR", match[0]])
+			ret.push(["OPERATOR", match[0], linenum])
 			str = str.substring(match[0].length, str.length)
 		}
 
@@ -68,7 +68,7 @@ function lex(str) {
 				}
 				else val += str.charAt(i)
 			}
-			ret.push(["STRING", val])
+			ret.push(["STRING", val, linenum])
 		}
 
 		// Heredocs
@@ -79,7 +79,7 @@ function lex(str) {
 				ret.push(["ERROR", "missing heredoc terminator: \"" + terminator + "\"", linenum])
 				return ret
 			}
-			ret.push(["STRING", str.substring(match[0].length, endpos)])
+			ret.push(["STRING", str.substring(match[0].length, endpos), linenum])
 			linenum += countNewlines(str, 0, endpos+terminator.length)
 			str = str.substring(endpos + terminator.length, str.length)
 		}
