@@ -1,6 +1,14 @@
 exports.parseWorkflowFile = parseWorkflowFile
 
 function parseWorkflowFile(tokens, ofs) {
+	var errors = []
+	for (var i=0; i<tokens.length; i++) {
+		if (isa(tokens[i], "ERROR"))
+			errors.push(tokens[i])
+	}
+	if (errors.length > 0)
+		return errors
+
 	var node
 	var ret = []
 	if (node = parseVersion(tokens, ofs)) {

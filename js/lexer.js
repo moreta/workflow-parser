@@ -42,7 +42,8 @@ function lex(str) {
 						case '"':   val += '"';   break
 						case '\\':  val += '\\';  break
 						default:
-							console.log("lexer failure at: " + str.substr(i, 25) + "...")
+							ret.push(["ERROR", "illegal escape sequence: \"" + str.charAt(i) + "\""])
+							return ret
 					}
 				}
 				else val += str.charAt(i)
@@ -53,14 +54,14 @@ function lex(str) {
 			var terminator = match[1]
 			var endpos = str.indexOf(terminator, match[0].length)
 			if (endpos == -1) {
-				console.log("lexer failure: missing heredoc terminator (" + terminator + ") at: " + str.substr(0, 25) + "...")
+				ret.push(["ERROR", "missing heredoc terminator: \"" + terminator + "\""])
+				return ret
 			}
 			ret.push(["STRING", str.substring(match[0].length, endpos)])
 			str = str.substring(endpos + terminator.length, str.length)
 		}
 		else {
-			console.log("lexer failure at: " + str.substr(0, 25) + "...")
-			ret.push(null)
+			ret.push(["ERROR", "illegal character: \"" + str.charAt(0) + "\""])
 			return ret
 		}
 	}
