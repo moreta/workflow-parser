@@ -10,14 +10,14 @@ import (
 )
 
 func TestParseEmptyConfig(t *testing.T) {
-	workflow, errlist, err := parseString("")
-	assertParseSuccess(t, errlist, err, 0, 0, workflow)
-	workflow, errlist, err = parseString("{}")
-	assertParseSuccess(t, errlist, err, 0, 0, workflow)
+	workflow, err := parseString("")
+	assertParseSuccess(t, err, 0, 0, workflow)
+	workflow, err = parseString("{}")
+	assertParseSuccess(t, err, 0, 0, workflow)
 }
 
 func TestActionsAndAttributes(t *testing.T) {
-	workflow, errlist, err := parseString(`
+	workflow, err := parseString(`
 		"action" "a" {
 			"uses"="./x"
 			runs="cmd"
@@ -29,7 +29,7 @@ func TestActionsAndAttributes(t *testing.T) {
 			args=["foo", "bar"]
 			secrets=[ "THE", "CURRENCY", "OF", "INTIMACY" ]
 		}`)
-	assertParseSuccess(t, errlist, err, 2, 0, workflow)
+	assertParseSuccess(t, err, 2, 0, workflow)
 	assert.Equal(t, 0, workflow.Version)
 
 	actionA := workflow.Actions[0]
@@ -52,74 +52,74 @@ func TestActionsAndAttributes(t *testing.T) {
 }
 
 func TestStringEscaping(t *testing.T) {
-	workflow, errlist, err := parseString(`
+	workflow, err := parseString(`
 		action "a" {
 			uses="./x \" y \\ z"
 		}`)
-	assertParseSuccess(t, errlist, err, 1, 0, workflow)
+	assertParseSuccess(t, err, 1, 0, workflow)
 	assert.Equal(t, `./x " y \ z`, workflow.Actions[0].Uses.Raw)
 }
 
 func TestFileVersion0(t *testing.T) {
-	workflow, errlist, err := parseString(`"version"=0 action "a" { uses="./foo" }`)
-	assertParseSuccess(t, errlist, err, 1, 0, workflow)
+	workflow, err := parseString(`"version"=0 action "a" { uses="./foo" }`)
+	assertParseSuccess(t, err, 1, 0, workflow)
 	assert.Equal(t, 0, workflow.Version)
 }
 
 func TestFileVersion42(t *testing.T) {
-	workflow, errlist, err := parseString(`version=42 action "a" { uses="./foo" }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "`version = 42` is not supported")
+	workflow, err := parseString(`version=42 action "a" { uses="./foo" }`)
+	assertParseError(t, err, 1, 0, workflow, "`version = 42` is not supported")
 }
 
 func TestFileVersionMustComeFirst(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./foo" } version=0`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "`version` must be the first declaration")
+	workflow, err := parseString(`action "a" { uses="./foo" } version=0`)
+	assertParseError(t, err, 1, 0, workflow, "`version` must be the first declaration")
 }
 
 /*
 // TODO: enable this once const substitution is defined and implemented
 func TestUsesIsAVariable(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="${value}" command="foo" }`)
-	assertParseSuccess(t, errlist, err, 1, 0, workflow)
+	workflow, err := parseString(`action "a" { uses="${value}" command="foo" }`)
+	assertParseSuccess(t, err, 1, 0, workflow)
 }
 */
 
 func TestUnscopedVariableNames(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./x" runs="${value}" }`)
-	assertParseSuccess(t, errlist, err, 1, 0, workflow)
+	workflow, err := parseString(`action "a" { uses="./x" runs="${value}" }`)
+	assertParseSuccess(t, err, 1, 0, workflow)
 }
 
 func TestActionCollision(t *testing.T) {
-	workflow, errlist, err := parseString(`
+	workflow, err := parseString(`
 		action "a" { uses="./x" }
 		action "a" { uses="./x" }`)
-	assertParseError(t, errlist, err, 2, 0, workflow, "identifier `a' redefined")
+	assertParseError(t, err, 2, 0, workflow, "identifier `a' redefined")
 }
 
 func TestBadHCL(t *testing.T) {
-	workflow, errlist, err := parseString(`this is definitely not valid HCL!`)
-	assertSyntaxError(t, errlist, err, workflow, "illegal char")
-	workflow, errlist, err = parseString(`action "foo"`)
-	assertSyntaxError(t, errlist, err, workflow, "expected start of object ('{') or assignment ('=')")
-	workflow, errlist, err = parseString(`action "foo" {`)
-	assertSyntaxError(t, errlist, err, workflow, "object expected closing rbrace got: eof")
-	workflow, errlist, err = parseString(`action "foo" { uses=" }`)
-	assertSyntaxError(t, errlist, err, workflow, "literal not terminated")
-	workflow, errlist, err = parseString(`action "foo" { uses=""" }`)
-	assertSyntaxError(t, errlist, err, workflow, "literal not terminated")
+	workflow, err := parseString(`this is definitely not valid HCL!`)
+	assertSyntaxError(t, err, workflow, "illegal char")
+	workflow, err = parseString(`action "foo"`)
+	assertSyntaxError(t, err, workflow, "expected start of object ('{') or assignment ('=')")
+	workflow, err = parseString(`action "foo" {`)
+	assertSyntaxError(t, err, workflow, "object expected closing rbrace got: eof")
+	workflow, err = parseString(`action "foo" { uses=" }`)
+	assertSyntaxError(t, err, workflow, "literal not terminated")
+	workflow, err = parseString(`action "foo" { uses=""" }`)
+	assertSyntaxError(t, err, workflow, "literal not terminated")
 }
 
 func TestCircularDependencySelf(t *testing.T) {
-	workflow, errlist, err := parseString(`
+	workflow, err := parseString(`
 		action "a" {
 			uses="./x"
 			needs=["a"]
 		}`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "circular dependency")
+	assertParseError(t, err, 1, 0, workflow, "circular dependency")
 }
 
 func TestCircularDependencyOther(t *testing.T) {
-	workflow, errlist, err := parseString(`
+	workflow, err := parseString(`
 		// simple cycle: a -> b -> a
 		action "a" { uses="./x" needs=["b", "g"] }
 		action "b" { uses="./x" needs=["a", "f"] }
@@ -146,7 +146,7 @@ func TestCircularDependencyOther(t *testing.T) {
 	// Each unique cycle should be reported exactly once, at the first point
 	// (reading top to bottom, left to right) that the cycle is apparent to
 	// the parser.
-	assertParseError(t, errlist, err, 10, 0, workflow,
+	assertParseError(t, err, 10, 0, workflow,
 		"line 4: circular dependency on `a'",
 		"line 9: circular dependency on `c'",
 		"line 13: circular dependency on `b'",
@@ -156,16 +156,16 @@ func TestCircularDependencyOther(t *testing.T) {
 }
 
 func TestFlowMapping(t *testing.T) {
-	workflow, errlist, err := parseString(`"workflow" "foo" { "on" = "push" resolves = ["a", "b"] } action "a" { uses="./x" } action "b" { uses="./y" }`)
-	assertParseSuccess(t, errlist, err, 2, 1, workflow)
+	workflow, err := parseString(`"workflow" "foo" { "on" = "push" resolves = ["a", "b"] } action "a" { uses="./x" } action "b" { uses="./y" }`)
+	assertParseSuccess(t, err, 2, 1, workflow)
 	assert.Equal(t, 0, workflow.Version)
 	assert.Equal(t, "push", workflow.Workflows[0].On)
 	assert.ElementsMatch(t, []string{"a", "b"}, workflow.Workflows[0].Resolves)
 }
 
 func TestFlowOneResolve(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
-	assertParseSuccess(t, errlist, err, 1, 1, workflow)
+	workflow, err := parseString(`workflow "foo" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
+	assertParseSuccess(t, err, 1, 1, workflow)
 	assert.Equal(t, 0, workflow.Version)
 	assert.Equal(t, "push", workflow.Workflows[0].On)
 	assert.Len(t, workflow.Workflows[0].Resolves[0], 1)
@@ -173,8 +173,8 @@ func TestFlowOneResolve(t *testing.T) {
 }
 
 func TestFlowNoResolves(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { on = "push"}`)
-	assertParseSuccess(t, errlist, err, 0, 1, workflow)
+	workflow, err := parseString(`workflow "foo" { on = "push"}`)
+	assertParseSuccess(t, err, 0, 1, workflow)
 	assert.Equal(t, 0, workflow.Version)
 	assert.Equal(t, "push", workflow.Workflows[0].On)
 	assert.Len(t, workflow.Workflows[0].Resolves, 0)
@@ -182,13 +182,13 @@ func TestFlowNoResolves(t *testing.T) {
 }
 
 func TestUses(t *testing.T) {
-	workflow, errlist, err := parseString(`
+	workflow, err := parseString(`
 		action "a" { uses="foo/bar@dev" }
 		action "b" { uses="foo/bar/path@1.0.0" }
 		action "c" { uses="./xyz" }
 		action "d" { uses="docker://alpine" }
 	`)
-	assertParseSuccess(t, errlist, err, 4, 0, workflow)
+	assertParseSuccess(t, err, 4, 0, workflow)
 	a := workflow.GetAction("a")
 	if assert.NotNil(t, a) {
 		assert.Equal(t, model.ActionUses{Repo: "foo/bar", Path: "/", Ref: "dev", Raw: "foo/bar@dev"}, a.Uses)
@@ -208,28 +208,28 @@ func TestUses(t *testing.T) {
 }
 
 func TestUsesFailures(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="foo" }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "the `uses' attribute must be a path, a docker image, or owner/repo@ref")
-	workflow, errlist, err = parseString(`action "a" { uses="foo/bar" }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "the `uses' attribute must be a path, a docker image, or owner/repo@ref")
-	workflow, errlist, err = parseString(`action "a" { uses="foo@bar" }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "the `uses' attribute must be a path, a docker image, or owner/repo@ref")
-	workflow, errlist, err = parseString(`action "a" { uses={a="b"} }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err := parseString(`action "a" { uses="foo" }`)
+	assertParseError(t, err, 1, 0, workflow, "the `uses' attribute must be a path, a docker image, or owner/repo@ref")
+	workflow, err = parseString(`action "a" { uses="foo/bar" }`)
+	assertParseError(t, err, 1, 0, workflow, "the `uses' attribute must be a path, a docker image, or owner/repo@ref")
+	workflow, err = parseString(`action "a" { uses="foo@bar" }`)
+	assertParseError(t, err, 1, 0, workflow, "the `uses' attribute must be a path, a docker image, or owner/repo@ref")
+	workflow, err = parseString(`action "a" { uses={a="b"} }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"expected string, got object",
 		"action `a' must have a `uses' attribute")
-	workflow, errlist, err = parseString(`action "a" { uses=["x"] }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err = parseString(`action "a" { uses=["x"] }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"expected string, got list",
 		"action `a' must have a `uses' attribute")
-	workflow, errlist, err = parseString(`action "a" { uses=42 }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err = parseString(`action "a" { uses=42 }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"expected string, got number",
 		"action `a' must have a `uses' attribute")
 }
 
 func TestGetCommand(t *testing.T) {
-	workflow, errlist, err := parseString(`
+	workflow, err := parseString(`
 		action "a" { uses="./x" runs="a b c" }
 		action "b" { uses="./x" runs=["a", "b", "c"] }
 		action "c" { uses="./x" args="a b c" }
@@ -237,7 +237,7 @@ func TestGetCommand(t *testing.T) {
 		action "e" { uses="./x" runs="a b c" args="x y z" }
 		action "f" { uses="./x" runs=["a", "b", "c"] args=["x", "y", "z"] }
 	`)
-	assertParseSuccess(t, errlist, err, 6, 0, workflow)
+	assertParseSuccess(t, err, 6, 0, workflow)
 	a := workflow.GetAction("a")
 	assert.NotNil(t, a)
 	assert.Equal(t, model.ActionCommand{Parsed: []string{"a", "b", "c"}, Raw: "a b c"}, a.Runs)
@@ -261,39 +261,39 @@ func TestGetCommand(t *testing.T) {
 }
 
 func TestGetCommandFailure(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./x" runs=42 }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err := parseString(`action "a" { uses="./x" runs=42 }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"expected string, got number",
 		"the `runs' attribute must be a string or a list")
-	workflow, errlist, err = parseString(`action "a" { uses="./x" runs={} }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err = parseString(`action "a" { uses="./x" runs={} }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"expected string, got object",
 		"the `runs' attribute must be a string or a list")
-	workflow, errlist, err = parseString(`action "a" { uses="./x" runs="" }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "`runs' value in action `a' cannot be blank")
+	workflow, err = parseString(`action "a" { uses="./x" runs="" }`)
+	assertParseError(t, err, 1, 0, workflow, "`runs' value in action `a' cannot be blank")
 
-	workflow, errlist, err = parseString(`action "a" { uses="./x" args=42 }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err = parseString(`action "a" { uses="./x" args=42 }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"expected string, got number",
 		"the `args' attribute must be a string or a list")
-	workflow, errlist, err = parseString(`action "a" { uses="./x" args={} }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err = parseString(`action "a" { uses="./x" args={} }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"expected string, got object",
 		"the `args' attribute must be a string or a list")
-	workflow, errlist, err = parseString(`action "a" { uses="./x" args="" }`)
-	assertParseSuccess(t, errlist, err, 1, 0, workflow)
+	workflow, err = parseString(`action "a" { uses="./x" args="" }`)
+	assertParseSuccess(t, err, 1, 0, workflow)
 }
 
 func TestBadEnv(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./x" env=[] }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "expected object, got list")
-	workflow, errlist, err = parseString(`action "a" { uses="./x" env="foo" }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "expected object, got string")
-	workflow, errlist, err = parseString(`action "a" { uses="./x" env=42 }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "expected object, got number")
-	workflow, errlist, err = parseString(`action "a" { uses="./x" env=12.34 }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "expected object, got float")
-	workflow, errlist, err = parseString(`
+	workflow, err := parseString(`action "a" { uses="./x" env=[] }`)
+	assertParseError(t, err, 1, 0, workflow, "expected object, got list")
+	workflow, err = parseString(`action "a" { uses="./x" env="foo" }`)
+	assertParseError(t, err, 1, 0, workflow, "expected object, got string")
+	workflow, err = parseString(`action "a" { uses="./x" env=42 }`)
+	assertParseError(t, err, 1, 0, workflow, "expected object, got number")
+	workflow, err = parseString(`action "a" { uses="./x" env=12.34 }`)
+	assertParseError(t, err, 1, 0, workflow, "expected object, got float")
+	workflow, err = parseString(`
 		action "a" {
 			uses="./x"
 			env={
@@ -309,63 +309,63 @@ func TestBadEnv(t *testing.T) {
 			}
 		}
 	`)
-	assertParseError(t, errlist, err, 2, 0, workflow,
+	assertParseError(t, err, 2, 0, workflow,
 		"line 4: environment variables and secrets must contain only a-z, a-z, 0-9, and _ characters, got `^'",
 		"line 12: environment variables and secrets must contain only a-z, a-z, 0-9, and _ characters, got `a.'")
 	assert.Equal(t, 3, len(workflow.Actions[0].Env))
 	assert.Equal(t, "bar", workflow.Actions[0].Env["^"])
 
-	workflow, errlist, err = parseString(`action "a" { uses="./x" env={x="foo" x="bar"} }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err = parseString(`action "a" { uses="./x" env={x="foo" x="bar"} }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"line 1: environment variable `x' redefined")
 	assert.Equal(t, map[string]string{"x": "bar"}, workflow.Actions[0].Env)
 }
 
 func TestBadSecrets(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./x" secrets={} }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "expected list, got object")
-	workflow, errlist, err = parseString(`action "a" { uses="./x" secrets="foo" }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "expected list, got string")
-	workflow, errlist, err = parseString(`action "a" { uses="./x" secrets=42 }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "expected list, got number")
-	workflow, errlist, err = parseString(`action "a" { uses="./x" secrets=[ "-", "^", "9", "a", "0_o", "o_0" ] }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err := parseString(`action "a" { uses="./x" secrets={} }`)
+	assertParseError(t, err, 1, 0, workflow, "expected list, got object")
+	workflow, err = parseString(`action "a" { uses="./x" secrets="foo" }`)
+	assertParseError(t, err, 1, 0, workflow, "expected list, got string")
+	workflow, err = parseString(`action "a" { uses="./x" secrets=42 }`)
+	assertParseError(t, err, 1, 0, workflow, "expected list, got number")
+	workflow, err = parseString(`action "a" { uses="./x" secrets=[ "-", "^", "9", "a", "0_o", "o_0" ] }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"line 1: environment variables and secrets must contain only a-z, a-z, 0-9, and _ characters, got `-'",
 		"line 1: environment variables and secrets must contain only a-z, a-z, 0-9, and _ characters, got `^'",
 		"line 1: environment variables and secrets must contain only a-z, a-z, 0-9, and _ characters, got `9'",
 		"line 1: environment variables and secrets must contain only a-z, a-z, 0-9, and _ characters, got `0_o'")
 	assert.Equal(t, []string{"-", "^", "9", "a", "0_o", "o_0"}, workflow.Actions[0].Secrets)
 
-	workflow, errlist, err = parseString(`action "a" { uses="./x" env={x="foo"} secrets=["x"] }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err = parseString(`action "a" { uses="./x" env={x="foo"} secrets=["x"] }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"line 1: secret `x' conflicts with an environment variable with the same name")
 	assert.Equal(t, map[string]string{"x": "foo"}, workflow.Actions[0].Env)
 	assert.Equal(t, []string{"x"}, workflow.Actions[0].Secrets)
 
-	workflow, errlist, err = parseString(`action "a" { uses="./x" secrets=["x", "y", "x"] }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "line 1: secret `x' redefined")
+	workflow, err = parseString(`action "a" { uses="./x" secrets=["x", "y", "x"] }`)
+	assertParseError(t, err, 1, 0, workflow, "line 1: secret `x' redefined")
 	assert.Equal(t, []string{"x", "y", "x"}, workflow.Actions[0].Secrets)
 }
 
 func TestUsesCustomActionsTransformed(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./foo" }`)
-	assertParseSuccess(t, errlist, err, 1, 0, workflow)
+	workflow, err := parseString(`action "a" { uses="./foo" }`)
+	assertParseSuccess(t, err, 1, 0, workflow)
 	action := workflow.GetAction("a")
 	require.NotNil(t, action)
 	assert.Equal(t, "./foo", action.Uses.Path)
 }
 
 func TestUsesCustomActionsShortPath(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./" }`)
-	assertParseSuccess(t, errlist, err, 1, 0, workflow)
+	workflow, err := parseString(`action "a" { uses="./" }`)
+	assertParseSuccess(t, err, 1, 0, workflow)
 	action := workflow.GetAction("a")
 	require.NotNil(t, action)
 	assert.Equal(t, "./", action.Uses.Path)
 }
 
 func TestTwoFlows(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { on = "push" resolves = "a" } workflow "bar" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
-	assertParseSuccess(t, errlist, err, 1, 2, workflow)
+	workflow, err := parseString(`workflow "foo" { on = "push" resolves = "a" } workflow "bar" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
+	assertParseSuccess(t, err, 1, 2, workflow)
 	assert.Equal(t, 0, workflow.Version)
 	assert.Equal(t, "push", workflow.Workflows[0].On)
 	assert.Len(t, workflow.Workflows[0].Resolves[0], 1)
@@ -376,42 +376,42 @@ func TestTwoFlows(t *testing.T) {
 }
 
 func TestOnPush(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
-	assertParseSuccess(t, errlist, err, 1, 1, workflow)
+	workflow, err := parseString(`workflow "foo" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
+	assertParseSuccess(t, err, 1, 1, workflow)
 	onValue := workflow.Workflows[0].On
 	assert.Equal(t, "push", onValue)
 }
 
 func TestOnPullRequest(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { on = "pull_request" resolves = "a" } action "a" { uses="./x" }`)
-	assertParseSuccess(t, errlist, err, 1, 1, workflow)
+	workflow, err := parseString(`workflow "foo" { on = "pull_request" resolves = "a" } action "a" { uses="./x" }`)
+	assertParseSuccess(t, err, 1, 1, workflow)
 	onValue := workflow.Workflows[0].On
 	assert.Equal(t, "pull_request", onValue)
 }
 
 func TestResolves(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
-	assertParseSuccess(t, errlist, err, 1, 1, workflow)
+	workflow, err := parseString(`workflow "foo" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
+	assertParseSuccess(t, err, 1, 1, workflow)
 	resolveValues := workflow.Workflows[0].Resolves
 	assert.Equal(t, []string{"a"}, resolveValues)
 }
 
 func TestMultipleResolves(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { on = "push" resolves = ["a","b"] } action "a" { uses="./x" } action "b" { uses="./y" }`)
-	assertParseSuccess(t, errlist, err, 2, 1, workflow)
+	workflow, err := parseString(`workflow "foo" { on = "push" resolves = ["a","b"] } action "a" { uses="./x" } action "b" { uses="./y" }`)
+	assertParseSuccess(t, err, 2, 1, workflow)
 	resolveValues := workflow.Workflows[0].Resolves
 	assert.Equal(t, []string{"a", "b"}, resolveValues)
 	assert.Len(t, resolveValues, 2)
 }
 
 func TestNeeds(t *testing.T) {
-	workflow, errlist, err := parseString(`
+	workflow, err := parseString(`
 		action "a" { uses="./w" needs="b" }
 		action "b" { uses="./x" needs=["c", "d"] }
 		action "c" { uses="./y" }
 		action "d" { uses="./y" }
 	`)
-	assertParseSuccess(t, errlist, err, 4, 0, workflow)
+	assertParseSuccess(t, err, 4, 0, workflow)
 	needsValues := workflow.Actions[0].Needs
 	assert.Equal(t, []string{"b"}, needsValues)
 	needsValues = workflow.Actions[1].Needs
@@ -421,8 +421,8 @@ func TestNeeds(t *testing.T) {
 }
 
 func TestGetWorkflows(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
-	assertParseSuccess(t, errlist, err, 1, 1, workflow)
+	workflow, err := parseString(`workflow "foo" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
+	assertParseSuccess(t, err, 1, 1, workflow)
 	workflows := workflow.GetWorkflows("push")
 	require.Equal(t, 1, len(workflows))
 	assert.Equal(t, "foo", workflows[0].Identifier)
@@ -431,20 +431,20 @@ func TestGetWorkflows(t *testing.T) {
 }
 
 func TestFlowMissingOn(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { resolves = "a" } action "a" { uses="./x" }`)
-	assertParseError(t, errlist, err, 1, 1, workflow, "workflow `foo' must have an `on' attribute")
+	workflow, err := parseString(`workflow "foo" { resolves = "a" } action "a" { uses="./x" }`)
+	assertParseError(t, err, 1, 1, workflow, "workflow `foo' must have an `on' attribute")
 }
 
 func TestFlowOnTypeError(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { on = 42 resolves = "a" } action "a" { uses="./x" }`)
-	assertParseError(t, errlist, err, 1, 1, workflow,
+	workflow, err := parseString(`workflow "foo" { on = 42 resolves = "a" } action "a" { uses="./x" }`)
+	assertParseError(t, err, 1, 1, workflow,
 		"expected string, got number",
 		"invalid format for `on' in workflow `foo'",
 		"workflow `foo' must have an `on' attribute")
 }
 
 func TestFlowOnUnexpectedValue(t *testing.T) {
-	workflow, errlist, err := parseString(`
+	workflow, err := parseString(`
 		workflow "foo" {
 			on = "hsup"
 			resolves = "a"
@@ -453,7 +453,7 @@ func TestFlowOnUnexpectedValue(t *testing.T) {
 		action "a" {
 			uses="./x"
 		}`)
-	assertParseError(t, errlist, err, 1, 1, workflow,
+	assertParseError(t, err, 1, 1, workflow,
 		"line 3: workflow `foo' has unknown `on' value `hsup'",
 		"line 5: `on' redefined in workflow `foo'",
 		"line 5: expected string, got number",
@@ -462,88 +462,88 @@ func TestFlowOnUnexpectedValue(t *testing.T) {
 }
 
 func TestFlowResolvesTypeError(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { on = "push" resolves = 42 } action "a" { uses="./x" }`)
-	assertParseError(t, errlist, err, 1, 1, workflow,
+	workflow, err := parseString(`workflow "foo" { on = "push" resolves = 42 } action "a" { uses="./x" }`)
+	assertParseError(t, err, 1, 1, workflow,
 		"expected list, got number",
 		"invalid format for `resolves' in workflow `foo', expected list of strings")
 }
 
 func TestFlowMissingAction(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "foo" { on = "push" resolves = ["a", "b"] } action "a" { uses="./x" }`)
-	assertParseError(t, errlist, err, 1, 1, workflow, "workflow `foo' resolves unknown action `b'")
+	workflow, err := parseString(`workflow "foo" { on = "push" resolves = ["a", "b"] } action "a" { uses="./x" }`)
+	assertParseError(t, err, 1, 1, workflow, "workflow `foo' resolves unknown action `b'")
 }
 
 func TestUsesMissingCheck(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "action `a' must have a `uses' attribute")
+	workflow, err := parseString(`action "a" { }`)
+	assertParseError(t, err, 1, 0, workflow, "action `a' must have a `uses' attribute")
 }
 
 func TestUsesAttributeBlankCheck(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="" }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err := parseString(`action "a" { uses="" }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"`uses' value in action `a' cannot be blank",
 		"action `a' must have a `uses' attribute")
 }
 
 func TestUsesDuplicatesCheck(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./x" uses="./y" }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "`uses' redefined in action `a'")
+	workflow, err := parseString(`action "a" { uses="./x" uses="./y" }`)
+	assertParseError(t, err, 1, 0, workflow, "`uses' redefined in action `a'")
 }
 
 func TestCommandDuplicatesCheck(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./x" runs="x" runs="y" }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "`runs' redefined in action `a'")
-	workflow, errlist, err = parseString(`action "a" { uses="./x" args="x" args="y" }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "`args' redefined in action `a'")
+	workflow, err := parseString(`action "a" { uses="./x" runs="x" runs="y" }`)
+	assertParseError(t, err, 1, 0, workflow, "`runs' redefined in action `a'")
+	workflow, err = parseString(`action "a" { uses="./x" args="x" args="y" }`)
+	assertParseError(t, err, 1, 0, workflow, "`args' redefined in action `a'")
 }
 
 func TestFlowKeywordsRedefined(t *testing.T) {
-	workflow, errlist, err := parseString(`workflow "a" { on="push" on="push" resolves=["c"] }`)
-	assertParseError(t, errlist, err, 0, 1, workflow,
+	workflow, err := parseString(`workflow "a" { on="push" on="push" resolves=["c"] }`)
+	assertParseError(t, err, 0, 1, workflow,
 		"`on' redefined in workflow `a'",
 		"resolves unknown action `c'")
-	workflow, errlist, err = parseString(`workflow "a" { on="push" resolves=["b"] resolves=["c"] }`)
-	assertParseError(t, errlist, err, 0, 1, workflow,
+	workflow, err = parseString(`workflow "a" { on="push" resolves=["b"] resolves=["c"] }`)
+	assertParseError(t, err, 0, 1, workflow,
 		"`resolves' redefined in workflow `a'",
 		"resolves unknown action `c'")
 }
 
 func TestNonExistentExplicitDependency(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./x" needs=["b"] }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "action `a' needs nonexistent action `b'")
+	workflow, err := parseString(`action "a" { uses="./x" needs=["b"] }`)
+	assertParseError(t, err, 1, 0, workflow, "action `a' needs nonexistent action `b'")
 }
 
 func TestBadDependenciesList(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./x" needs=42 }`)
-	assertParseError(t, errlist, err, 1, 0, workflow, "expected list, got number")
+	workflow, err := parseString(`action "a" { uses="./x" needs=42 }`)
+	assertParseError(t, err, 1, 0, workflow, "expected list, got number")
 }
 
 func TestActionExtraKeywords(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" "b" { }`)
-	assertParseError(t, errlist, err, 0, 0, workflow, "invalid toplevel declaration")
+	workflow, err := parseString(`action "a" "b" { }`)
+	assertParseError(t, err, 0, 0, workflow, "invalid toplevel declaration")
 }
 
 func TestInvalidKeyword(t *testing.T) {
-	workflow, errlist, err := parseString(`hello "a" { }`)
-	assertParseError(t, errlist, err, 0, 0, workflow, "invalid toplevel keyword")
+	workflow, err := parseString(`hello "a" { }`)
+	assertParseError(t, err, 0, 0, workflow, "invalid toplevel keyword")
 }
 
 func TestInvalidActionIdentifier(t *testing.T) {
-	workflow, errlist, err := parseString(`action "" { }`)
-	assertParseError(t, errlist, err, 0, 0, workflow, "invalid format for identifier")
+	workflow, err := parseString(`action "" { }`)
+	assertParseError(t, err, 0, 0, workflow, "invalid format for identifier")
 }
 
 func TestInvalidAttribute(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses { } }`)
-	assertParseError(t, errlist, err, 1, 0, workflow,
+	workflow, err := parseString(`action "a" { uses { } }`)
+	assertParseError(t, err, 1, 0, workflow,
 		"each attribute of action `a' must be an assignment",
 		"expected string, got object",
 		"action `a' must have a `uses' attribute")
 }
 
 func TestContinueAfterBadAssignment(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses { } } action "b" { uses="./foo" }`)
-	assertParseError(t, errlist, err, 2, 0, workflow,
+	workflow, err := parseString(`action "a" { uses { } } action "b" { uses="./foo" }`)
+	assertParseError(t, err, 2, 0, workflow,
 		"each attribute of action `a' must be an assignment",
 		"expected string, got object",
 		"action `a' must have a `uses' attribute")
@@ -554,39 +554,39 @@ func TestContinueAfterBadAssignment(t *testing.T) {
 }
 
 func TestTooManySecrets(t *testing.T) {
-	workflow, errlist, err := parseString(`
+	workflow, err := parseString(`
 		action "a" { uses="./a" secrets=["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"] }
 	`)
-	assertParseSuccess(t, errlist, err, 1, 0, workflow)
+	assertParseSuccess(t, err, 1, 0, workflow)
 	require.NotNil(t, workflow)
 	assert.Equal(t, 10, len(workflow.Actions[0].Secrets))
 
-	workflow, errlist, err = parseString(`
+	workflow, err = parseString(`
 		action "a" { uses="./a" secrets=["A", "B", "C", "D", "E"] }
 		action "b" { uses="./b" secrets=["D", "E", "F", "G", "H", "I", "J"] }
 	`)
-	assertParseSuccess(t, errlist, err, 2, 0, workflow)
+	assertParseSuccess(t, err, 2, 0, workflow)
 	require.NotNil(t, workflow)
 	assert.Equal(t, 5, len(workflow.Actions[0].Secrets))
 	assert.Equal(t, 7, len(workflow.Actions[1].Secrets))
 
-	workflow, errlist, err = parseString(`
+	workflow, err = parseString(`
 		action "a" { uses="./a" secrets=["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11", "S12", "S13", "S14", "S15", "S16", "S17", "S18", "S19", "S20", "S21", "S22", "S23", "S24", "S25", "S26", "S27", "S28", "S29", "S30", "S31", "S32", "S33", "S34", "S35", "S36", "S37", "S38", "S39", "S40"] }
 		action "b" { uses="./b" secrets=["S35", "S36", "S37", "S38", "S39", "S40", "S41", "S42", "S43", "S44", "S45", "S46", "S47", "S48", "S49", "S50", "S51", "S52", "S53", "S54", "S55", "S56", "S57", "S58", "S59", "S60", "S61", "S62", "S63", "S64", "S65", "S66", "S67", "S68", "S69", "S70", "S71", "S72", "S73", "S74", "S75", "S76", "S77", "S78", "S79", "S80", "S81", "S82", "S83", "S84", "S85", "S86", "S87", "S88", "S89", "S90", "S91", "S92", "S93", "S94", "S95", "S96", "S97", "S98", "S99", "S100", "S101"] }
 		action "c" { uses="./b" secrets=["S90", "S91", "S92", "S93", "S94", "S95", "S96", "S97", "S98", "S99", "S100", "S101", "S102", "S103", "S104", "S105", "S106", "S107", "S108", "S109", "S110"] }
 	`)
-	assertParseError(t, errlist, err, 3, 0, workflow, "all actions combined must not have more than 100 unique secrets")
+	assertParseError(t, err, 3, 0, workflow, "all actions combined must not have more than 100 unique secrets")
 }
 
 func TestUnknownAttributes(t *testing.T) {
-	workflow, errlist, err := parseString(`action "a" { uses="./a" foo="1" } workflow "b" { on="push" bar="2" }`)
-	assertParseError(t, errlist, err, 1, 1, workflow,
+	workflow, err := parseString(`action "a" { uses="./a" foo="1" } workflow "b" { on="push" bar="2" }`)
+	assertParseError(t, err, 1, 1, workflow,
 		"unknown action attribute `foo'",
 		"unknown workflow attribute `bar'")
 }
 
 func TestReservedVariables(t *testing.T) {
-	workflow, errlist, err := parseString(`
+	workflow, err := parseString(`
 		action "a" {
 			uses="./a"
 			env={
@@ -602,7 +602,7 @@ func TestReservedVariables(t *testing.T) {
 			]
 		}
 	`)
-	assertParseError(t, errlist, err, 2, 0, workflow,
+	assertParseError(t, err, 2, 0, workflow,
 		// the `env=` line in `a`
 		"line 4: environment variables and secrets beginning with `github_' are reserved",
 		// the `secrets=` line in `b`
@@ -642,9 +642,8 @@ func TestUsesForm(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(tt *testing.T) {
-			workflow, errlist, err := Parse(strings.NewReader(tc.action))
+			workflow, err := Parse(strings.NewReader(tc.action))
 			require.NoError(tt, err)
-			assert.Equal(tt, 0, len(errlist))
 			assert.Equalf(tt, tc.expectedForm, workflow.Actions[0].Uses.Form(), "%+v", workflow.Actions[0].Uses)
 		})
 	}
@@ -652,30 +651,16 @@ func TestUsesForm(t *testing.T) {
 
 /********** helpers **********/
 
-func assertParseSuccess(t *testing.T, errlist []*Error, err error, nactions int, nflows int, workflow *model.Configuration, errors ...string) {
+func assertParseSuccess(t *testing.T, err error, nactions int, nflows int, workflow *model.Configuration, errors ...string) {
 	require.NoError(t, err)
-	require.Nil(t, errlist)
 	require.NotNil(t, workflow)
 
 	assert.Equal(t, nactions, len(workflow.Actions), "actions")
 	assert.Equal(t, nflows, len(workflow.Workflows), "workflows")
-
-	for _, e := range errlist {
-		t.Log(e)
-		assert.NotEqual(t, 0, e.Pos.Line, "error position not set")
-	}
-	assert.Equal(t, len(errors), len(errlist), "errors")
-	for i := range errors {
-		if i >= len(errlist) {
-			break
-		}
-		assert.Contains(t, strings.ToLower(errlist[i].Error()), errors[i])
-	}
 }
 
-func assertParseError(t *testing.T, errlist []*Error, err error, nactions int, nflows int, workflow *model.Configuration, errors ...string) {
+func assertParseError(t *testing.T, err error, nactions int, nflows int, workflow *model.Configuration, errors ...string) {
 	require.Error(t, err)
-	require.Nil(t, errlist)
 	// TODO Don't rely on workflow for the parsed workflows and actions
 	// require.Nil(t, workflow)
 
@@ -697,10 +682,9 @@ func assertParseError(t *testing.T, errlist []*Error, err error, nactions int, n
 	}
 }
 
-func assertSyntaxError(t *testing.T, errlist []*Error, err error, workflow *model.Configuration, errMsg string) {
+func assertSyntaxError(t *testing.T, err error, workflow *model.Configuration, errMsg string) {
 	assert.Error(t, err)
 	require.Nil(t, workflow)
-	require.Nil(t, errlist)
 
 	if se, ok := err.(*Error); ok {
 		t.Log(se)
@@ -711,6 +695,6 @@ func assertSyntaxError(t *testing.T, errlist []*Error, err error, workflow *mode
 	}
 }
 
-func parseString(workflowFile string) (*model.Configuration, []*Error, error) {
+func parseString(workflowFile string) (*model.Configuration, error) {
 	return Parse(strings.NewReader(workflowFile))
 }

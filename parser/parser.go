@@ -41,21 +41,21 @@ type parseState struct {
 // returned model.Configuration object.  The caller can enumerate all
 // errors and filter them by severity to see if it makes sense to proceed
 // with displaying or executing the workflows in the file.
-func Parse(reader io.Reader) (*model.Configuration, ErrorList, error) {
+func Parse(reader io.Reader) (*model.Configuration, error) {
 	// FIXME - check context for deadline?
 	b, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	root, err := hcl.ParseBytes(b)
 	if err != nil {
 		if posError, ok := err.(*hclparser.PosError); ok {
-			return nil, nil, newError(
+			return nil, newError(
 				ErrorPos{File: posError.Pos.Filename, Line: posError.Pos.Line, Column: posError.Pos.Column},
 				posError.Err.Error())
 		}
-		return nil, nil, err
+		return nil, err
 	}
 
 	parseState := parseAndValidate(root.Node)
@@ -64,14 +64,14 @@ func Parse(reader io.Reader) (*model.Configuration, ErrorList, error) {
 			Version:   parseState.Version,
 			Actions:   parseState.Actions,
 			Workflows: parseState.Workflows,
-		}, nil, &ParserError{message: "unable to parse and validate", Errors: parseState.Errors}
+		}, &ParserError{message: "unable to parse and validate", Errors: parseState.Errors}
 	}
 
 	return &model.Configuration{
 		Version:   parseState.Version,
 		Actions:   parseState.Actions,
 		Workflows: parseState.Workflows,
-	}, nil, nil
+	}, nil
 }
 
 // parseAndValidate converts a HCL AST into a parseState and validates
