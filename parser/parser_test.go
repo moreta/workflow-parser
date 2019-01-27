@@ -677,10 +677,10 @@ func assertSyntaxError(t *testing.T, errlist []*Error, err error, workflow *mode
 	require.Nil(t, workflow)
 	require.Nil(t, errlist)
 
-	if pe, ok := err.(*Error); ok {
-		t.Log(pe)
-		assert.NotEqual(t, 0, pe.Pos.Line, "error position not set")
-		assert.Contains(t, strings.ToLower(pe.Error()), errMsg)
+	if se, ok := err.(*Error); ok {
+		t.Log(se)
+		assert.NotEqual(t, 0, se.Pos.Line, "error position not set")
+		assert.Contains(t, strings.ToLower(se.Error()), errMsg)
 	} else {
 		t.Fail()
 	}
