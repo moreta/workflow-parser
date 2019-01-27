@@ -36,6 +36,14 @@ func (ps *parseState) addError(node ast.Node, format string, a ...interface{}) {
 	ps.Errors = append(ps.Errors, newError(posFromNode(node), format, a...))
 }
 
+func (ps *parseState) addErrorFromToken(t token.Token, format string, a ...interface{}) {
+	ps.Errors = append(ps.Errors, newError(posFromToken(t), format, a...))
+}
+
+func (ps *parseState) addErrorFromObjectItem(objectItem *ast.ObjectItem, format string, a ...interface{}) {
+	ps.Errors = append(ps.Errors, newError(posFromObjectItem(objectItem), format, a...))
+}
+
 func (ps *parseState) addFatal(node ast.Node, format string, a ...interface{}) {
 	ps.Errors = append(ps.Errors, newFatal(posFromNode(node), format, a...))
 }
@@ -331,9 +339,9 @@ func (ps *parseState) identString(t token.Token) string {
 	case token.IDENT:
 		return t.Text
 	default:
-		ps.Errors = append(ps.Errors, newError(posFromToken(t),
+		ps.addErrorFromToken(t,
 			"Each identifier should be a string, got %s",
-			strings.ToLower(t.Type.String())))
+			strings.ToLower(t.Type.String()))
 		return ""
 	}
 }
@@ -752,8 +760,7 @@ func (ps *parseState) checkAssignmentsOnly(objectList *ast.ObjectList, actionID 
 			} else {
 				desc = fmt.Sprintf("action `%s'", actionID)
 			}
-			ps.Errors = append(ps.Errors, newError(posFromObjectItem(item),
-				"Each attribute of %s must be an assignment", desc))
+			ps.addErrorFromObjectItem(item, "Each attribute of %s must be an assignment", desc)
 			continue
 		}
 
