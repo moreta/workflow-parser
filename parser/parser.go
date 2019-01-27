@@ -52,9 +52,12 @@ func Parse(reader io.Reader, options ...OptionFunc) (*model.Configuration, error
 	root, err := hcl.ParseBytes(b)
 	if err != nil {
 		if pe, ok := err.(*hclparser.PosError); ok {
-			return nil, newFatal(
-				ErrorPos{File: pe.Pos.Filename, Line: pe.Pos.Line, Column: pe.Pos.Column},
-				pe.Err.Error())
+			pos := ErrorPos{File: pe.Pos.Filename, Line: pe.Pos.Line, Column: pe.Pos.Column}
+			errors := ErrorList{newFatal(pos, pe.Err.Error())}
+			return nil, &ParserError{
+				message: pe.Err.Error(),
+				Errors:  errors,
+			}
 		}
 		return nil, err
 	}
