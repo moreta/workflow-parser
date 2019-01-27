@@ -84,8 +84,10 @@ func (e *Error) Error() string {
 }
 
 const (
+	_ = iota
+
 	// WARNING indicates a mistake that might affect correctness
-	WARNING = iota
+	WARNING
 
 	// ERROR indicates a mistake that prevents execution of any workflows in the file
 	ERROR

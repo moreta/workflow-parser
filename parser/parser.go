@@ -25,7 +25,8 @@ type parseState struct {
 	Workflows []*model.Workflow
 	Errors    ErrorList
 
-	posMap map[interface{}]ast.Node
+	posMap           map[interface{}]ast.Node
+	suppressSeverity Severity
 }
 
 // Parse parses a .workflow file and return the actions and global variables found within.
@@ -737,22 +738,42 @@ func (ps *parseState) checkAssignmentsOnly(objectList *ast.ObjectList, actionID 
 }
 
 func (ps *parseState) addWarning(node ast.Node, format string, a ...interface{}) {
+	if ps.suppressSeverity >= WARNING {
+		return
+	}
+
 	ps.Errors = append(ps.Errors, newWarning(posFromNode(node), format, a...))
 }
 
 func (ps *parseState) addError(node ast.Node, format string, a ...interface{}) {
+	if ps.suppressSeverity >= ERROR {
+		return
+	}
+
 	ps.Errors = append(ps.Errors, newError(posFromNode(node), format, a...))
 }
 
 func (ps *parseState) addErrorFromToken(t token.Token, format string, a ...interface{}) {
+	if ps.suppressSeverity >= ERROR {
+		return
+	}
+
 	ps.Errors = append(ps.Errors, newError(posFromToken(t), format, a...))
 }
 
 func (ps *parseState) addErrorFromObjectItem(objectItem *ast.ObjectItem, format string, a ...interface{}) {
+	if ps.suppressSeverity >= ERROR {
+		return
+	}
+
 	ps.Errors = append(ps.Errors, newError(posFromObjectItem(objectItem), format, a...))
 }
 
 func (ps *parseState) addFatal(node ast.Node, format string, a ...interface{}) {
+	if ps.suppressSeverity >= FATAL {
+		return
+	}
+
 	ps.Errors = append(ps.Errors, newFatal(posFromNode(node), format, a...))
 }
 
