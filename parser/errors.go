@@ -5,11 +5,15 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/github/actions-parser/model"
 )
 
 type ParserError struct {
-	message string
-	Errors  ErrorList
+	message   string
+	Errors    ErrorList
+	Actions   []*model.Action
+	Workflows []*model.Workflow
 }
 
 func (p *ParserError) Error() string {

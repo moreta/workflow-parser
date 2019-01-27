@@ -312,13 +312,15 @@ func TestBadEnv(t *testing.T) {
 	assertParseError(t, err, 2, 0, workflow,
 		"line 4: environment variables and secrets must contain only a-z, a-z, 0-9, and _ characters, got `^'",
 		"line 12: environment variables and secrets must contain only a-z, a-z, 0-9, and _ characters, got `a.'")
-	assert.Equal(t, 3, len(workflow.Actions[0].Env))
-	assert.Equal(t, "bar", workflow.Actions[0].Env["^"])
+	pe := extractParserError(t, err)
+	assert.Equal(t, 3, len(pe.Actions[0].Env))
+	assert.Equal(t, "bar", pe.Actions[0].Env["^"])
 
 	workflow, err = parseString(`action "a" { uses="./x" env={x="foo" x="bar"} }`)
 	assertParseError(t, err, 1, 0, workflow,
 		"line 1: environment variable `x' redefined")
-	assert.Equal(t, map[string]string{"x": "bar"}, workflow.Actions[0].Env)
+	pe = extractParserError(t, err)
+	assert.Equal(t, map[string]string{"x": "bar"}, pe.Actions[0].Env)
 }
 
 func TestBadSecrets(t *testing.T) {
@@ -334,17 +336,20 @@ func TestBadSecrets(t *testing.T) {
 		"line 1: environment variables and secrets must contain only a-z, a-z, 0-9, and _ characters, got `^'",
 		"line 1: environment variables and secrets must contain only a-z, a-z, 0-9, and _ characters, got `9'",
 		"line 1: environment variables and secrets must contain only a-z, a-z, 0-9, and _ characters, got `0_o'")
-	assert.Equal(t, []string{"-", "^", "9", "a", "0_o", "o_0"}, workflow.Actions[0].Secrets)
+	pe := extractParserError(t, err)
+	assert.Equal(t, []string{"-", "^", "9", "a", "0_o", "o_0"}, pe.Actions[0].Secrets)
 
 	workflow, err = parseString(`action "a" { uses="./x" env={x="foo"} secrets=["x"] }`)
 	assertParseError(t, err, 1, 0, workflow,
 		"line 1: secret `x' conflicts with an environment variable with the same name")
-	assert.Equal(t, map[string]string{"x": "foo"}, workflow.Actions[0].Env)
-	assert.Equal(t, []string{"x"}, workflow.Actions[0].Secrets)
+	pe = extractParserError(t, err)
+	assert.Equal(t, map[string]string{"x": "foo"}, pe.Actions[0].Env)
+	assert.Equal(t, []string{"x"}, pe.Actions[0].Secrets)
 
 	workflow, err = parseString(`action "a" { uses="./x" secrets=["x", "y", "x"] }`)
 	assertParseError(t, err, 1, 0, workflow, "line 1: secret `x' redefined")
-	assert.Equal(t, []string{"x", "y", "x"}, workflow.Actions[0].Secrets)
+	pe = extractParserError(t, err)
+	assert.Equal(t, []string{"x", "y", "x"}, pe.Actions[0].Secrets)
 }
 
 func TestUsesCustomActionsTransformed(t *testing.T) {
@@ -458,7 +463,8 @@ func TestFlowOnUnexpectedValue(t *testing.T) {
 		"line 5: `on' redefined in workflow `foo'",
 		"line 5: expected string, got number",
 		"line 5: invalid format for `on' in workflow `foo', expected string")
-	assert.Equal(t, "hsup", workflow.Workflows[0].On)
+	pe := extractParserError(t, err)
+	assert.Equal(t, "hsup", pe.Workflows[0].On)
 }
 
 func TestFlowResolvesTypeError(t *testing.T) {
@@ -547,10 +553,11 @@ func TestContinueAfterBadAssignment(t *testing.T) {
 		"each attribute of action `a' must be an assignment",
 		"expected string, got object",
 		"action `a' must have a `uses' attribute")
-	require.NotNil(t, workflow)
-	require.Equal(t, 2, len(workflow.Actions))
-	assert.Equal(t, "a", workflow.Actions[0].Identifier)
-	assert.Equal(t, "b", workflow.Actions[1].Identifier)
+	require.Nil(t, workflow)
+	pe := extractParserError(t, err)
+	require.Equal(t, 2, len(pe.Actions))
+	assert.Equal(t, "a", pe.Actions[0].Identifier)
+	assert.Equal(t, "b", pe.Actions[1].Identifier)
 }
 
 func TestTooManySecrets(t *testing.T) {
@@ -607,9 +614,10 @@ func TestReservedVariables(t *testing.T) {
 		"line 4: environment variables and secrets beginning with `github_' are reserved",
 		// the `secrets=` line in `b`
 		"line 11: environment variables and secrets beginning with `github_' are reserved")
-	assert.Equal(t, "nope", workflow.Actions[0].Env["GITHUB_FOO"])
-	assert.Equal(t, "yup", workflow.Actions[0].Env["GITHUB_TOKEN"])
-	assert.Equal(t, []string{"GITHUB_BAR", "GITHUB_TOKEN"}, workflow.Actions[1].Secrets)
+	pe := extractParserError(t, err)
+	assert.Equal(t, "nope", pe.Actions[0].Env["GITHUB_FOO"])
+	assert.Equal(t, "yup", pe.Actions[0].Env["GITHUB_TOKEN"])
+	assert.Equal(t, []string{"GITHUB_BAR", "GITHUB_TOKEN"}, pe.Actions[1].Secrets)
 }
 
 func TestUsesForm(t *testing.T) {
@@ -661,12 +669,11 @@ func assertParseSuccess(t *testing.T, err error, nactions int, nflows int, workf
 
 func assertParseError(t *testing.T, err error, nactions int, nflows int, workflow *model.Configuration, errors ...string) {
 	require.Error(t, err)
-	// TODO Don't rely on workflow for the parsed workflows and actions
-	// require.Nil(t, workflow)
+	require.Nil(t, workflow)
 
 	if pe, ok := err.(*ParserError); ok {
-		assert.Equal(t, nactions, len(workflow.Actions), "actions")
-		assert.Equal(t, nflows, len(workflow.Workflows), "workflows")
+		assert.Equal(t, nactions, len(pe.Actions), "actions")
+		assert.Equal(t, nflows, len(pe.Workflows), "workflows")
 
 		for _, e := range pe.Errors {
 			t.Log(e)
@@ -699,4 +706,13 @@ func assertSyntaxError(t *testing.T, err error, workflow *model.Configuration, e
 
 func parseString(workflowFile string) (*model.Configuration, error) {
 	return Parse(strings.NewReader(workflowFile))
+}
+
+func extractParserError(t *testing.T, err error) *ParserError {
+	if pe, ok := err.(*ParserError); ok {
+		return pe
+	}
+
+	t.Fail()
+	return nil
 }
