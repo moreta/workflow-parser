@@ -59,11 +59,19 @@ func Parse(reader io.Reader) (*model.Configuration, ErrorList, error) {
 	}
 
 	parseState := parseAndValidate(root.Node)
+	if len(parseState.Errors) > 0 {
+		return &model.Configuration{
+			Version:   parseState.Version,
+			Actions:   parseState.Actions,
+			Workflows: parseState.Workflows,
+		}, nil, &ParserError{message: "unable to parse and validate", Errors: parseState.Errors}
+	}
+
 	return &model.Configuration{
 		Version:   parseState.Version,
 		Actions:   parseState.Actions,
 		Workflows: parseState.Workflows,
-	}, parseState.Errors, nil
+	}, nil, nil
 }
 
 // parseAndValidate converts a HCL AST into a parseState and validates
