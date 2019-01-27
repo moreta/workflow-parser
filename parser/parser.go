@@ -28,6 +28,10 @@ type parseState struct {
 	posMap map[interface{}]ast.Node
 }
 
+func (ps *parseState) addWarning(node ast.Node, format string, a ...interface{}) {
+	ps.Errors = append(ps.Errors, newWarning(posFromNode(node), format, a...))
+}
+
 // Parse parses a .workflow file and return the actions and global variables found within.
 //
 // Parameters:
@@ -197,8 +201,7 @@ func (ps *parseState) checkActions() {
 					"Secret `%s' conflicts with an environment variable with the same name", k))
 			}
 			if secretVars[k] {
-				ps.Errors = append(ps.Errors, newWarning(posFromNode(ps.posMap[&t.Secrets]),
-					"Secret `%s' redefined", k))
+				ps.addWarning(ps.posMap[&t.Secrets], "Secret `%s' redefined", k)
 			}
 			secretVars[k] = true
 		}
@@ -209,12 +212,10 @@ var envVarChecker = regexp.MustCompile(`\A[A-Za-z_][A-Za-z_0-9]*\z`)
 
 func (ps *parseState) checkEnvironmentVariable(key string, node ast.Node) {
 	if key != "GITHUB_TOKEN" && strings.HasPrefix(key, "GITHUB_") {
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(node),
-			"Environment variables and secrets beginning with `GITHUB_' are reserved"))
+		ps.addWarning(node, "Environment variables and secrets beginning with `GITHUB_' are reserved")
 	}
 	if !envVarChecker.MatchString(key) {
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(node),
-			"Environment variables and secrets must contain only A-Z, a-z, 0-9, and _ characters, got `%s'", key))
+		ps.addWarning(node, "Environment variables and secrets must contain only A-Z, a-z, 0-9, and _ characters, got `%s'", key)
 	}
 }
 
@@ -312,8 +313,7 @@ func (ps *parseState) literalToStringMap(node ast.Node) map[string]string {
 			key := ps.identString(item.Keys[0].Token)
 			if key != "" {
 				if _, found := ret[key]; found {
-					ps.Errors = append(ps.Errors, newWarning(posFromNode(node),
-						"Environment variable `%s' redefined", key))
+					ps.addWarning(node, "Environment variable `%s' redefined", key)
 				}
 				ret[key] = str
 			}
@@ -511,7 +511,7 @@ func (ps *parseState) parseIdentifier(key *ast.ObjectKey) string {
 // out-parameter `value` and returning true if successful.
 func (ps *parseState) parseRequiredString(value *string, val ast.Node, nodeType, name, id string) bool {
 	if *value != "" {
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(val), "`%s' redefined in %s `%s'", name, nodeType, id))
+		ps.addWarning(val, "`%s' redefined in %s `%s'", name, nodeType, id)
 		// continue, allowing the redefinition
 	}
 
@@ -604,7 +604,7 @@ func (ps *parseState) parseActionAttribute(name string, action *model.Action, va
 			ps.posMap[&action.Secrets] = val
 		}
 	default:
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(val), "Unknown action attribute `%s'", name))
+		ps.addWarning(val, "Unknown action attribute `%s'", name)
 	}
 }
 
@@ -612,8 +612,7 @@ func (ps *parseState) parseActionAttribute(name string, action *model.Action, va
 // node.  This function enforces formatting requirements on the value.
 func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 	if action.Uses.Path != "" {
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(node),
-			"`uses' redefined in action `%s'", action.Identifier))
+		ps.addWarning(node, "`uses' redefined in action `%s'", action.Identifier)
 		// continue, allowing the redefinition
 	}
 	strVal, ok := ps.literalToString(node)
@@ -665,8 +664,7 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 // requirements on the value.
 func (ps *parseState) parseCommand(action *model.Action, dest *model.ActionCommand, name string, node ast.Node, allowBlank bool) {
 	if len(dest.Parsed) > 0 {
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(node),
-			"`%s' redefined in action `%s'", name, action.Identifier))
+		ps.addWarning(node, "`%s' redefined in action `%s'", name, action.Identifier)
 		// continue, allowing the redefinition
 	}
 
@@ -728,8 +726,7 @@ func (ps *parseState) workflowifyItem(item *ast.ObjectItem) *model.Workflow {
 			}
 		case "resolves":
 			if workflow.Resolves != nil {
-				ps.Errors = append(ps.Errors, newWarning(posFromNode(item.Val),
-					"`resolves' redefined in workflow `%s'", id))
+				ps.addWarning(item.Val, "`resolves' redefined in workflow `%s'", id)
 				// continue, allowing the redefinition
 			}
 			workflow.Resolves, ok = ps.literalToStringArray(item.Val, true)
@@ -740,8 +737,7 @@ func (ps *parseState) workflowifyItem(item *ast.ObjectItem) *model.Workflow {
 				// continue, allowing workflow with no `resolves`
 			}
 		default:
-			ps.Errors = append(ps.Errors, newWarning(posFromNode(item.Val),
-				"Unknown workflow attribute `%s'", name))
+			ps.addWarning(item.Val, "Unknown workflow attribute `%s'", name)
 			// continue, treat as no-op
 		}
 	}
