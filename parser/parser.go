@@ -78,20 +78,20 @@ func Parse(reader io.Reader) (*model.Configuration, error) {
 		return nil, err
 	}
 
-	parseState := parseAndValidate(root.Node)
-	if len(parseState.Errors) > 0 {
+	ps := parseAndValidate(root.Node)
+	if len(ps.Errors) > 0 {
 		return nil, &ParserError{
 			message:   "unable to parse and validate",
-			Errors:    parseState.Errors,
-			Actions:   parseState.Actions,
-			Workflows: parseState.Workflows,
+			Errors:    ps.Errors,
+			Actions:   ps.Actions,
+			Workflows: ps.Workflows,
 		}
 	}
 
 	return &model.Configuration{
-		Version:   parseState.Version,
-		Actions:   parseState.Actions,
-		Workflows: parseState.Workflows,
+		Version:   ps.Version,
+		Actions:   ps.Actions,
+		Workflows: ps.Workflows,
 	}, nil
 }
 
