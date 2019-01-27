@@ -679,6 +679,8 @@ func assertParseError(t *testing.T, err error, nactions int, nflows int, workflo
 			}
 			assert.Contains(t, strings.ToLower(pe.Errors[i].Error()), errors[i])
 		}
+	} else {
+		t.Fail()
 	}
 }
 
