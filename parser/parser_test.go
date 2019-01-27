@@ -653,8 +653,11 @@ func TestUsesForm(t *testing.T) {
 /********** helpers **********/
 
 func assertParseSuccess(t *testing.T, errlist []*Error, err error, nactions int, nflows int, workflow *model.Configuration, errors ...string) {
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.NotNil(t, workflow)
+
+	assert.Equal(t, nactions, len(workflow.Actions), "actions")
+	assert.Equal(t, nflows, len(workflow.Workflows), "workflows")
 
 	for _, e := range errlist {
 		t.Log(e)
@@ -667,9 +670,6 @@ func assertParseSuccess(t *testing.T, errlist []*Error, err error, nactions int,
 		}
 		assert.Contains(t, strings.ToLower(errlist[i].Error()), errors[i])
 	}
-
-	assert.Equal(t, nactions, len(workflow.Actions), "actions")
-	assert.Equal(t, nflows, len(workflow.Workflows), "workflows")
 }
 
 func assertSyntaxError(t *testing.T, errlist []*Error, err error, workflow *model.Configuration, errMsg string) {
