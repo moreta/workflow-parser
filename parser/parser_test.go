@@ -98,15 +98,15 @@ func TestActionCollision(t *testing.T) {
 
 func TestBadHCL(t *testing.T) {
 	workflow, errlist, err := parseString(`this is definitely not valid HCL!`)
-	assertParseError(t, errlist, err, 0, 0, workflow, "illegal char")
+	assertParseError(t, errlist, err, workflow, "illegal char")
 	workflow, errlist, err = parseString(`action "foo"`)
-	assertParseError(t, errlist, err, 0, 0, workflow, "expected start of object ('{') or assignment ('=')")
+	assertParseError(t, errlist, err, workflow, "expected start of object ('{') or assignment ('=')")
 	workflow, errlist, err = parseString(`action "foo" {`)
-	assertParseError(t, errlist, err, 0, 0, workflow, "object expected closing rbrace got: eof")
+	assertParseError(t, errlist, err, workflow, "object expected closing rbrace got: eof")
 	workflow, errlist, err = parseString(`action "foo" { uses=" }`)
-	assertParseError(t, errlist, err, 0, 0, workflow, "literal not terminated")
+	assertParseError(t, errlist, err, workflow, "literal not terminated")
 	workflow, errlist, err = parseString(`action "foo" { uses=""" }`)
-	assertParseError(t, errlist, err, 0, 0, workflow, "literal not terminated")
+	assertParseError(t, errlist, err, workflow, "literal not terminated")
 }
 
 func TestCircularDependencySelf(t *testing.T) {
@@ -672,7 +672,7 @@ func assertParseSuccess(t *testing.T, errlist []*Error, err error, nactions int,
 	assert.Equal(t, nflows, len(workflow.Workflows), "workflows")
 }
 
-func assertParseError(t *testing.T, errlist []*Error, err error, nactions int, nflows int, workflow *model.Configuration, errMsg string) {
+func assertParseError(t *testing.T, errlist []*Error, err error, workflow *model.Configuration, errMsg string) {
 	assert.Error(t, err)
 	require.Nil(t, workflow)
 	require.Nil(t, errlist)
