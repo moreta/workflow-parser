@@ -36,6 +36,10 @@ func (ps *parseState) addError(node ast.Node, format string, a ...interface{}) {
 	ps.Errors = append(ps.Errors, newError(posFromNode(node), format, a...))
 }
 
+func (ps *parseState) addFatal(node ast.Node, format string, a ...interface{}) {
+	ps.Errors = append(ps.Errors, newFatal(posFromNode(node), format, a...))
+}
+
 // Parse parses a .workflow file and return the actions and global variables found within.
 //
 // Parameters:
@@ -160,8 +164,7 @@ func (ps *parseState) checkCircularDependencies() {
 	g := graph.Directed{AdjacencyList: adjList}
 	g.Cycles(func(cycle []graph.NI) bool {
 		node := ps.posMap[&ps.Actions[cycle[len(cycle)-1]].Needs]
-		ps.Errors = append(ps.Errors,
-			newFatal(posFromNode(node), "Circular dependency on `%s'", ps.Actions[cycle[0]].Identifier))
+		ps.addFatal(node, "Circular dependency on `%s'", ps.Actions[cycle[0]].Identifier)
 		return true
 	})
 }
