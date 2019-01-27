@@ -42,7 +42,7 @@ type parseState struct {
 // returned model.Configuration object.  The caller can enumerate all
 // errors and filter them by severity to see if it makes sense to proceed
 // with displaying or executing the workflows in the file.
-func Parse(reader io.Reader) (*model.Configuration, error) {
+func Parse(reader io.Reader, options ...OptionFunc) (*model.Configuration, error) {
 	// FIXME - check context for deadline?
 	b, err := ioutil.ReadAll(reader)
 	if err != nil {
@@ -59,7 +59,7 @@ func Parse(reader io.Reader) (*model.Configuration, error) {
 		return nil, err
 	}
 
-	ps := parseAndValidate(root.Node)
+	ps := parseAndValidate(root.Node, options...)
 	if len(ps.Errors) > 0 {
 		return nil, &ParserError{
 			message:   "unable to parse and validate",
@@ -82,10 +82,15 @@ func Parse(reader io.Reader) (*model.Configuration, error) {
 //  - root - the contents of a .workflow file, as AST
 // Returns:
 //  - a parseState structure containing actions and workflow definitions
-func parseAndValidate(root ast.Node) *parseState {
+func parseAndValidate(root ast.Node, options ...OptionFunc) *parseState {
 	ps := &parseState{
 		posMap: make(map[interface{}]ast.Node),
 	}
+
+	for _, option := range options {
+		option(ps)
+	}
+
 	ps.parseRoot(root)
 	ps.validate()
 	ps.Errors.sort()
