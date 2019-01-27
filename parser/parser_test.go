@@ -16,6 +16,19 @@ func TestParseEmptyConfig(t *testing.T) {
 	assertParseSuccess(t, err, 0, 0, workflow)
 }
 
+func TestSeveritySuppression(t *testing.T) {
+	warn := `
+	  action "a" {
+		  uses = "./x"
+		  bananas = "are the best"
+	  }`
+
+	workflow, err := parseString(warn)
+	assertParseError(t, err, 1, 0, workflow, "line 4: unknown action attribute `bananas'")
+	workflow, err = parseString(warn, WithSuppressSeverity(WARNING))
+	assertParseSuccess(t, err, 1, 0, workflow)
+}
+
 func TestActionsAndAttributes(t *testing.T) {
 	workflow, err := parseString(`
 		"action" "a" {
@@ -696,8 +709,8 @@ func assertSyntaxError(t *testing.T, err error, workflow *model.Configuration, e
 	}
 }
 
-func parseString(workflowFile string) (*model.Configuration, error) {
-	return Parse(strings.NewReader(workflowFile))
+func parseString(workflowFile string, options ...OptionFunc) (*model.Configuration, error) {
+	return Parse(strings.NewReader(workflowFile), options...)
 }
 
 func extractParserError(t *testing.T, err error) *ParserError {
