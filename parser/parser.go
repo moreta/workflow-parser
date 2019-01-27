@@ -28,26 +28,6 @@ type parseState struct {
 	posMap map[interface{}]ast.Node
 }
 
-func (ps *parseState) addWarning(node ast.Node, format string, a ...interface{}) {
-	ps.Errors = append(ps.Errors, newWarning(posFromNode(node), format, a...))
-}
-
-func (ps *parseState) addError(node ast.Node, format string, a ...interface{}) {
-	ps.Errors = append(ps.Errors, newError(posFromNode(node), format, a...))
-}
-
-func (ps *parseState) addErrorFromToken(t token.Token, format string, a ...interface{}) {
-	ps.Errors = append(ps.Errors, newError(posFromToken(t), format, a...))
-}
-
-func (ps *parseState) addErrorFromObjectItem(objectItem *ast.ObjectItem, format string, a ...interface{}) {
-	ps.Errors = append(ps.Errors, newError(posFromObjectItem(objectItem), format, a...))
-}
-
-func (ps *parseState) addFatal(node ast.Node, format string, a ...interface{}) {
-	ps.Errors = append(ps.Errors, newFatal(posFromNode(node), format, a...))
-}
-
 // Parse parses a .workflow file and return the actions and global variables found within.
 //
 // Parameters:
@@ -769,6 +749,26 @@ func (ps *parseState) checkAssignmentsOnly(objectList *ast.ObjectList, actionID 
 			ps.checkAssignmentsOnly(child.List, actionID)
 		}
 	}
+}
+
+func (ps *parseState) addWarning(node ast.Node, format string, a ...interface{}) {
+	ps.Errors = append(ps.Errors, newWarning(posFromNode(node), format, a...))
+}
+
+func (ps *parseState) addError(node ast.Node, format string, a ...interface{}) {
+	ps.Errors = append(ps.Errors, newError(posFromNode(node), format, a...))
+}
+
+func (ps *parseState) addErrorFromToken(t token.Token, format string, a ...interface{}) {
+	ps.Errors = append(ps.Errors, newError(posFromToken(t), format, a...))
+}
+
+func (ps *parseState) addErrorFromObjectItem(objectItem *ast.ObjectItem, format string, a ...interface{}) {
+	ps.Errors = append(ps.Errors, newError(posFromObjectItem(objectItem), format, a...))
+}
+
+func (ps *parseState) addFatal(node ast.Node, format string, a ...interface{}) {
+	ps.Errors = append(ps.Errors, newFatal(posFromNode(node), format, a...))
 }
 
 // posFromNode returns an ErrorPos (file, line, and column) from an AST
