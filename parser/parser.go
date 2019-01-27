@@ -82,27 +82,12 @@ func Parse(reader io.Reader) (*model.Configuration, error) {
 // Returns:
 //  - a parseState structure containing actions and workflow definitions
 func parseAndValidate(root ast.Node) *parseState {
-	ps := parseOnly(root)
-	ps.validate()
-	ps.Errors.sort()
-
-	return ps
-}
-
-// parseOnly traverses the AST of a HCL and constructs a parseState.
-// Syntax and low-level semantic errors are flagged, but file-level
-// structural properties are not checked.
-//
-// Parameters:
-//  - root - the contents of a .workflow file, as []byte
-// Returns:
-//  - a parseState structure containing actions, workflow definitions, and global
-//    variables
-func parseOnly(root ast.Node) *parseState {
 	ps := &parseState{
 		posMap: make(map[interface{}]ast.Node),
 	}
 	ps.parseRoot(root)
+	ps.validate()
+	ps.Errors.sort()
 
 	return ps
 }
