@@ -29,14 +29,11 @@ func parseFile(fn string) {
 	config, err := parser.Parse(file)
 
 	if err != nil {
-		switch e := err.(type) {
-		case *parser.Error:
-			fmt.Printf("%s: %s\n", fn, e)
-		case *parser.ParserError:
-			for _, pe := range e.Errors {
-				fmt.Printf("%s: %s\n", fn, pe)
+		if pe, ok := err.(*parser.ParserError); ok {
+			for _, e := range pe.Errors {
+				fmt.Printf("%s: %s\n", fn, e)
 			}
-		default:
+		} else {
 			panic(err)
 		}
 
