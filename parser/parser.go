@@ -30,18 +30,6 @@ type parseState struct {
 }
 
 // Parse parses a .workflow file and return the actions and global variables found within.
-//
-// Parameters:
-//  - reader - an opened main.workflow file
-//
-// Returns: a model.Configuration
-//
-// A note about error handling: although Parse returns an error, the only
-// errors handled that way are genuine surprises like I/O errors.  Parse
-// errors are all handled by being appended to the Errors field of the
-// returned model.Configuration object.  The caller can enumerate all
-// errors and filter them by severity to see if it makes sense to proceed
-// with displaying or executing the workflows in the file.
 func Parse(reader io.Reader, options ...OptionFunc) (*model.Configuration, error) {
 	// FIXME - check context for deadline?
 	b, err := ioutil.ReadAll(reader)
