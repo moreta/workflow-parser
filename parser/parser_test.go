@@ -76,14 +76,6 @@ func TestFileVersionMustComeFirst(t *testing.T) {
 	assertParseError(t, err, 1, 0, workflow, "`version` must be the first declaration")
 }
 
-/*
-// TODO: enable this once const substitution is defined and implemented
-func TestUsesIsAVariable(t *testing.T) {
-	workflow, err := parseString(`action "a" { uses="${value}" command="foo" }`)
-	assertParseSuccess(t, err, 1, 0, workflow)
-}
-*/
-
 func TestUnscopedVariableNames(t *testing.T) {
 	workflow, err := parseString(`action "a" { uses="./x" runs="${value}" }`)
 	assertParseSuccess(t, err, 1, 0, workflow)
