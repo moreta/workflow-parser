@@ -2,8 +2,14 @@ package parser
 
 type OptionFunc func(*parseState)
 
-func WithSuppressSeverity(sev Severity) OptionFunc {
+func WithSuppressWarnings() OptionFunc {
 	return func(ps *parseState) {
-		ps.suppressSeverity = sev
+		ps.suppressSeverity = WARNING
+	}
+}
+
+func WithSuppressErrors() OptionFunc {
+	return func(ps *parseState) {
+		ps.suppressSeverity = ERROR
 	}
 }

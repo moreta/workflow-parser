@@ -22,10 +22,15 @@ func TestSeveritySuppression(t *testing.T) {
 		  uses = "./x"
 		  bananas = "are the best"
 	  }`
+	errs := `action "a" {}`
 
 	workflow, err := parseString(warn)
 	assertParseError(t, err, 1, 0, workflow, "line 4: unknown action attribute `bananas'")
-	workflow, err = parseString(warn, WithSuppressSeverity(WARNING))
+	workflow, err = parseString(warn, WithSuppressWarnings())
+	assertParseSuccess(t, err, 1, 0, workflow)
+	workflow, err = parseString(errs)
+	assertParseError(t, err, 1, 0, workflow, "line 1: action `a' must have a `uses' attribute")
+	workflow, err = parseString(errs, WithSuppressErrors())
 	assertParseSuccess(t, err, 1, 0, workflow)
 }
 
