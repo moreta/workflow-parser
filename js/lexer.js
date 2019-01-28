@@ -20,7 +20,7 @@ function lex(str) {
 		}
 
 		// Skip comments
-		else if (match = str.match(/^#.*\n/)) {
+		else if (match = str.match(/^(?:#|\/\/).*\n/)) {
 			// console.log("comment: " + match[0].trim())
 			linenum += countNewlines(str, 0, match[0].length)
 			str = str.substring(match[0].length, str.length)
