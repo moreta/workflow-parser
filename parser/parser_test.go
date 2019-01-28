@@ -696,9 +696,11 @@ func assertParseError(t *testing.T, err error, nactions int, nflows int, workflo
 			}
 			assert.Contains(t, strings.ToLower(pe.Errors[i].Error()), errors[i])
 		}
-	} else {
-		t.Fail()
+
+		return
 	}
+
+	assert.Fail(t, "expected parser error, but got %T", err)
 }
 
 func assertSyntaxError(t *testing.T, err error, workflow *model.Configuration, errMsg string) {
@@ -710,9 +712,10 @@ func assertSyntaxError(t *testing.T, err error, workflow *model.Configuration, e
 		se := pe.Errors[0]
 		assert.NotEqual(t, 0, se.Pos.Line, "error position not set")
 		assert.Contains(t, strings.ToLower(se.Error()), errMsg)
-	} else {
-		t.Fail()
+		return
 	}
+
+	assert.Fail(t, "expected parser error, but got %T", err)
 }
 
 func parseString(workflowFile string, options ...OptionFunc) (*model.Configuration, error) {
@@ -724,6 +727,6 @@ func extractParserError(t *testing.T, err error) *ParserError {
 		return pe
 	}
 
-	t.Fail()
+	assert.Fail(t, "expected parser error, but got %T", err)
 	return nil
 }

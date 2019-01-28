@@ -28,16 +28,13 @@ func parseFile(fn string) {
 
 	config, err := parser.Parse(file)
 
-	if err != nil {
-		if pe, ok := err.(*parser.ParserError); ok {
-			for _, e := range pe.Errors {
-				fmt.Printf("%s: %s\n", fn, e)
-			}
-		} else {
-			panic(err)
+	if pe, ok := err.(*parser.ParserError); ok {
+		for _, e := range pe.Errors {
+			fmt.Printf("%s: %s\n", fn, e)
 		}
-
 		return
+	} else if err != nil {
+		panic(err)
 	}
 
 	fmt.Println(fn, "is a valid file with", plural(len(config.Actions), "action"), "and", plural(len(config.Workflows), "workflow"))
