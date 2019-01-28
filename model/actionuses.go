@@ -1,4 +1,4 @@
-package parser
+package model
 
 // ActionUses represents the mandatory "uses" block in an action.
 // It takes one of three forms:

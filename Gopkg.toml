@@ -27,7 +27,8 @@
 
 [[constraint]]
   name = "github.com/hashicorp/hcl"
-  version = "1.0.0"
+  revision = "d54c7b46069bed3307585a0141d18f7bd04be49f"
+  source = "github.com/anthonysterling/hcl"
 
 [[constraint]]
   name = "github.com/soniakeys/graph"
