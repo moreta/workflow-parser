@@ -729,6 +729,6 @@ func extractParserError(t *testing.T, err error) *ParserError {
 		return pe
 	}
 
-	assert.Fail(t, "expected parser error, but got %T", err)
+	require.Fail(t, "expected parser error, but got %T", err)
 	return nil
 }
