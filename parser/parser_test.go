@@ -670,7 +670,7 @@ func TestUsesForm(t *testing.T) {
 /********** helpers **********/
 
 func assertParseSuccess(t *testing.T, err error, nactions int, nflows int, workflow *model.Configuration) {
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	require.NotNil(t, workflow)
 
 	assert.Equal(t, nactions, len(workflow.Actions), "actions")
@@ -679,7 +679,7 @@ func assertParseSuccess(t *testing.T, err error, nactions int, nflows int, workf
 
 func assertParseError(t *testing.T, err error, nactions int, nflows int, workflow *model.Configuration, errors ...string) {
 	require.Error(t, err)
-	require.Nil(t, workflow)
+	assert.Nil(t, workflow)
 
 	if pe, ok := err.(*ParserError); ok {
 		assert.Equal(t, nactions, len(pe.Actions), "actions")
