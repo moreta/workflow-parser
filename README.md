@@ -14,17 +14,25 @@ There is a language specification, by example and by BNF grammar, in
 ```go
 import "github.com/github/actions-parser/parser"
 ...
-config, err := parser.Parse(fileName)
+config, err := parser.Parse(reader)
 ```
 
-`parser.Parse` returns an error only if some system error was encountered.
-Problems with the contents of the file will be returned in the
-`config.Errors` array, so that several errors may be indicated at once.
+`parser.Parse` returns an error if some parsing warning or error was encountered.
+Problems with the contents of the file will be returned in the `err.Errors`
+array, so that several errors may be indicated at once.
 
-If the file is parsed with no fatal errors, `config.Actions` and
+If the file is parsed with no errors, `config.Actions` and
 `config.Workflows` will contain objects representing all the `action` and
 `workflow` blocks in the file.
 
+To suppress warnings and errors, the parser can be invoked with severity
+suppression.
+
+```
+config, err := parser.Parse(reader, parser.WithSuppressWarnings())
+// or 
+config, err := parser.Parse(reader, parser.WithSuppressErrors())
+```
 
 # Developing
 

@@ -5,7 +5,20 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/github/actions-parser/model"
 )
+
+type ParserError struct {
+	message   string
+	Errors    ErrorList
+	Actions   []*model.Action
+	Workflows []*model.Workflow
+}
+
+func (p *ParserError) Error() string {
+	return p.message
+}
 
 // Error represents an error identified by the parser, either syntactic
 // (HCL) or semantic (.workflow) in nature.  There are fields for location
@@ -71,8 +84,10 @@ func (e *Error) Error() string {
 }
 
 const (
+	_ = iota
+
 	// WARNING indicates a mistake that might affect correctness
-	WARNING = iota
+	WARNING
 
 	// ERROR indicates a mistake that prevents execution of any workflows in the file
 	ERROR

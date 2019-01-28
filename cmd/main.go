@@ -27,17 +27,17 @@ func parseFile(fn string) {
 	defer file.Close()
 
 	config, err := parser.Parse(file)
-	if err != nil {
+
+	if pe, ok := err.(*parser.ParserError); ok {
+		for _, e := range pe.Errors {
+			fmt.Printf("%s: %s\n", fn, e)
+		}
+		return
+	} else if err != nil {
 		panic(err)
 	}
 
-	for _, err := range config.Errors {
-		fmt.Printf("%s: %s\n", fn, err)
-	}
-
-	if len(config.Errors) == 0 {
-		fmt.Println(fn, "is a valid file with", plural(len(config.Actions), "action"), "and", plural(len(config.Workflows), "workflow"))
-	}
+	fmt.Println(fn, "is a valid file with", plural(len(config.Actions), "action"), "and", plural(len(config.Workflows), "workflow"))
 }
 
 func plural(n int, s string) string {
