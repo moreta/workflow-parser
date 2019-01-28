@@ -708,6 +708,8 @@ func assertSyntaxError(t *testing.T, err error, workflow *model.Configuration, e
 	require.Nil(t, workflow)
 
 	if pe, ok := err.(*ParserError); ok {
+		assert.Nil(t, pe.Actions)
+		assert.Nil(t, pe.Workflows)
 		require.Len(t, pe.Errors, 1, "syntax errors should yield only one error")
 		se := pe.Errors[0]
 		assert.NotEqual(t, 0, se.Pos.Line, "error position not set")
