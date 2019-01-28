@@ -6,6 +6,9 @@ dep:
 test:
 	go test ./parser ./model
 
+fmt:
+	go fmt ./...
+
 cmd/parser: cmd/main.go
 	go build -o $@ $<
 
