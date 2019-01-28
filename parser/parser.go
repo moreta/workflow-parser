@@ -734,43 +734,33 @@ func (ps *parseState) checkAssignmentsOnly(objectList *ast.ObjectList, actionID 
 }
 
 func (ps *parseState) addWarning(node ast.Node, format string, a ...interface{}) {
-	if ps.suppressSeverity >= WARNING {
-		return
+	if ps.suppressSeverity < WARNING {
+		ps.Errors = append(ps.Errors, newWarning(posFromNode(node), format, a...))
 	}
-
-	ps.Errors = append(ps.Errors, newWarning(posFromNode(node), format, a...))
 }
 
 func (ps *parseState) addError(node ast.Node, format string, a ...interface{}) {
-	if ps.suppressSeverity >= ERROR {
-		return
+	if ps.suppressSeverity < ERROR {
+		ps.Errors = append(ps.Errors, newError(posFromNode(node), format, a...))
 	}
-
-	ps.Errors = append(ps.Errors, newError(posFromNode(node), format, a...))
 }
 
 func (ps *parseState) addErrorFromToken(t token.Token, format string, a ...interface{}) {
-	if ps.suppressSeverity >= ERROR {
-		return
+	if ps.suppressSeverity < ERROR {
+		ps.Errors = append(ps.Errors, newError(posFromToken(t), format, a...))
 	}
-
-	ps.Errors = append(ps.Errors, newError(posFromToken(t), format, a...))
 }
 
 func (ps *parseState) addErrorFromObjectItem(objectItem *ast.ObjectItem, format string, a ...interface{}) {
-	if ps.suppressSeverity >= ERROR {
-		return
+	if ps.suppressSeverity < ERROR {
+		ps.Errors = append(ps.Errors, newError(posFromObjectItem(objectItem), format, a...))
 	}
-
-	ps.Errors = append(ps.Errors, newError(posFromObjectItem(objectItem), format, a...))
 }
 
 func (ps *parseState) addFatal(node ast.Node, format string, a ...interface{}) {
-	if ps.suppressSeverity >= FATAL {
-		return
+	if ps.suppressSeverity < FATAL {
+		ps.Errors = append(ps.Errors, newFatal(posFromNode(node), format, a...))
 	}
-
-	ps.Errors = append(ps.Errors, newFatal(posFromNode(node), format, a...))
 }
 
 // posFromNode returns an ErrorPos (file, line, and column) from an AST
