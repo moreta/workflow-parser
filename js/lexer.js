@@ -57,6 +57,8 @@ function lex(str) {
 				}
 				if (str.charAt(i) == '\\') {
 					switch (str.charAt(++i)) {
+						case 'b':   val += '\b';  break
+						case 'f':   val += '\f';  break
 						case 'n':   val += '\n';  break
 						case 'r':   val += '\r';  break
 						case 't':   val += '\t';  break
