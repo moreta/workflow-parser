@@ -13,7 +13,7 @@ function lex(str) {
 	while (str != "") {
 		var match
 		// Skip whitespace
-		if (match = str.match(/^\s+/)) {
+		if (match = str.match(/^[ \t\n\r]/)) {
 			// console.log("whitespace: <" + match[0] + ">")
 			linenum += countNewlines(str, 0, match[0].length)
 			str = str.substring(match[0].length, str.length)
