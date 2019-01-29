@@ -45,20 +45,3 @@ func (u *UsesRepository) String() string {
 func (u *UsesPath) String() string {
 	return u.Path
 }
-
-// ActionUsesForm is which of the "uses" forms specified by an action.
-type ActionUsesForm string
-
-const (
-	// InRepoUsesForm describes an Action referring to code in the same repository as its workflow.
-	InRepoUsesForm ActionUsesForm = "in_repo"
-
-	// CrossRepoUsesForm describes an Action that refers to code in a specific repository from its workflow file.
-	CrossRepoUsesForm ActionUsesForm = "cross_repo"
-
-	// DockerImageUsesForm describes an Action that refers to a Docker image.
-	DockerImageUsesForm ActionUsesForm = "docker"
-
-	// UnknownDockerImageUses describes an Unknown type of Action.
-	UnknownDockerImageUses ActionUsesForm = "unknown"
-)
