@@ -17,6 +17,31 @@ type Uses struct {
 	Raw   string
 }
 
+type actionUses interface {
+	Form() string
+}
+
+// UsesDockerRegistry represents `uses = "docker://image"`
+type UsesDockerImage struct {
+	Image string
+}
+
+// UsesRepository represents `uses = "<owner>/<repository>[/path]@<ref>"`
+type UsesRepository struct {
+	Repository string
+	Path       string
+	Ref        string
+}
+
+// UsesPath represents `uses = "./<path>"`
+type UsesPath struct {
+	Path string
+}
+
+func (u *UsesDockerImage) Form() string { return string(DockerImageUsesForm) }
+func (u *UsesRepository) Form() string  { return string(CrossRepoUsesForm) }
+func (u *UsesPath) Form() string        { return string(InRepoUsesForm) }
+
 // ActionUsesForm is which of the "uses" forms specified by an action.
 type ActionUsesForm string
 
