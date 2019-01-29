@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/github/actions-parser/model"
+	"github.com/actions/workflow-parser/model"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	hclparser "github.com/hashicorp/hcl/hcl/parser"
@@ -25,47 +25,46 @@ type parseState struct {
 	Workflows []*model.Workflow
 	Errors    ErrorList
 
-	posMap map[interface{}]ast.Node
+	posMap           map[interface{}]ast.Node
+	suppressSeverity Severity
 }
 
 // Parse parses a .workflow file and return the actions and global variables found within.
-//
-// Parameters:
-//  - reader - an opened main.workflow file
-//
-// Returns: a model.Configuration
-//
-// A note about error handling: although Parse returns an error, the only
-// errors handled that way are genuine surprises like I/O errors.  Parse
-// errors are all handled by being appended to the Errors field of the
-// returned model.Configuration object.  The caller can enumerate all
-// errors and filter them by severity to see if it makes sense to proceed
-// with displaying or executing the workflows in the file.
-func Parse(reader io.Reader) (*model.Configuration, ErrorList, error) {
+func Parse(reader io.Reader, options ...OptionFunc) (*model.Configuration, error) {
 	// FIXME - check context for deadline?
 	b, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	root, err := hcl.ParseBytes(b)
 	if err != nil {
-		if posError, ok := err.(*hclparser.PosError); ok {
-			return &model.Configuration{}, ErrorList{
-				newError(
-					ErrorPos{File: posError.Pos.Filename, Line: posError.Pos.Line, Column: posError.Pos.Column},
-					posError.Err.Error())}, nil
+		if pe, ok := err.(*hclparser.PosError); ok {
+			pos := ErrorPos{File: pe.Pos.Filename, Line: pe.Pos.Line, Column: pe.Pos.Column}
+			errors := ErrorList{newFatal(pos, pe.Err.Error())}
+			return nil, &ParserError{
+				message: pe.Err.Error(),
+				Errors:  errors,
+			}
 		}
-		return &model.Configuration{}, ErrorList{
-			newError(ErrorPos{}, err.Error())}, nil
+		return nil, err
 	}
 
-	parseState := parseAndValidate(root.Node)
+	ps := parseAndValidate(root.Node, options...)
+	if len(ps.Errors) > 0 {
+		return nil, &ParserError{
+			message:   "unable to parse and validate",
+			Errors:    ps.Errors,
+			Actions:   ps.Actions,
+			Workflows: ps.Workflows,
+		}
+	}
+
 	return &model.Configuration{
-		Version:   parseState.Version,
-		Actions:   parseState.Actions,
-		Workflows: parseState.Workflows,
-	}, parseState.Errors, nil
+		Version:   ps.Version,
+		Actions:   ps.Actions,
+		Workflows: ps.Workflows,
+	}, nil
 }
 
 // parseAndValidate converts a HCL AST into a parseState and validates
@@ -74,28 +73,18 @@ func Parse(reader io.Reader) (*model.Configuration, ErrorList, error) {
 //  - root - the contents of a .workflow file, as AST
 // Returns:
 //  - a parseState structure containing actions and workflow definitions
-func parseAndValidate(root ast.Node) *parseState {
-	ps := parseOnly(root)
-	ps.validate()
-	ps.Errors.sort()
-
-	return ps
-}
-
-// parseOnly traverses the AST of a HCL and constructs a parseState.
-// Syntax and low-level semantic errors are flagged, but file-level
-// structural properties are not checked.
-//
-// Parameters:
-//  - root - the contents of a .workflow file, as []byte
-// Returns:
-//  - a parseState structure containing actions, workflow definitions, and global
-//    variables
-func parseOnly(root ast.Node) *parseState {
+func parseAndValidate(root ast.Node, options ...OptionFunc) *parseState {
 	ps := &parseState{
 		posMap: make(map[interface{}]ast.Node),
 	}
+
+	for _, option := range options {
+		option(ps)
+	}
+
 	ps.parseRoot(root)
+	ps.validate()
+	ps.Errors.sort()
 
 	return ps
 }
@@ -145,8 +134,7 @@ func (ps *parseState) checkCircularDependencies() {
 	g := graph.Directed{AdjacencyList: adjList}
 	g.Cycles(func(cycle []graph.NI) bool {
 		node := ps.posMap[&ps.Actions[cycle[len(cycle)-1]].Needs]
-		ps.Errors = append(ps.Errors,
-			newFatal(posFromNode(node), "Circular dependency on `%s'", ps.Actions[cycle[0]].Identifier))
+		ps.addFatal(node, "Circular dependency on `%s'", ps.Actions[cycle[0]].Identifier)
 		return true
 	})
 }
@@ -158,7 +146,7 @@ func (ps *parseState) checkActions() {
 	for _, t := range ps.Actions {
 		// Ensure the Action has a `uses` attribute
 		if t.Uses.Raw == "" {
-			ps.Errors = append(ps.Errors, newError(posFromNode(ps.posMap[t]), "Action `%s' must have a `uses' attribute", t.Identifier))
+			ps.addError(ps.posMap[t], "Action `%s' must have a `uses' attribute", t.Identifier)
 			// continue, checking other actions
 		}
 
@@ -167,8 +155,7 @@ func (ps *parseState) checkActions() {
 			if !secrets[str] {
 				secrets[str] = true
 				if len(secrets) == maxSecrets+1 {
-					ps.Errors = append(ps.Errors,
-						newError(posFromNode(ps.posMap[&t.Secrets]), "All actions combined must not have more than %d unique secrets", maxSecrets))
+					ps.addError(ps.posMap[&t.Secrets], "All actions combined must not have more than %d unique secrets", maxSecrets)
 				}
 			}
 		}
@@ -186,12 +173,10 @@ func (ps *parseState) checkActions() {
 		for _, k := range t.Secrets {
 			ps.checkEnvironmentVariable(k, ps.posMap[&t.Secrets])
 			if _, found := t.Env[k]; found {
-				ps.Errors = append(ps.Errors, newError(posFromNode(ps.posMap[&t.Secrets]),
-					"Secret `%s' conflicts with an environment variable with the same name", k))
+				ps.addError(ps.posMap[&t.Secrets], "Secret `%s' conflicts with an environment variable with the same name", k)
 			}
 			if secretVars[k] {
-				ps.Errors = append(ps.Errors, newWarning(posFromNode(ps.posMap[&t.Secrets]),
-					"Secret `%s' redefined", k))
+				ps.addWarning(ps.posMap[&t.Secrets], "Secret `%s' redefined", k)
 			}
 			secretVars[k] = true
 		}
@@ -202,12 +187,10 @@ var envVarChecker = regexp.MustCompile(`\A[A-Za-z_][A-Za-z_0-9]*\z`)
 
 func (ps *parseState) checkEnvironmentVariable(key string, node ast.Node) {
 	if key != "GITHUB_TOKEN" && strings.HasPrefix(key, "GITHUB_") {
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(node),
-			"Environment variables and secrets beginning with `GITHUB_' are reserved"))
+		ps.addWarning(node, "Environment variables and secrets beginning with `GITHUB_' are reserved")
 	}
 	if !envVarChecker.MatchString(key) {
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(node),
-			"Environment variables and secrets must contain only A-Z, a-z, 0-9, and _ characters, got `%s'", key))
+		ps.addWarning(node, "Environment variables and secrets must contain only A-Z, a-z, 0-9, and _ characters, got `%s'", key)
 	}
 }
 
@@ -218,12 +201,10 @@ func (ps *parseState) checkFlows() {
 	for _, f := range ps.Workflows {
 		// make sure there's an `on` attribute
 		if f.On == "" {
-			ps.Errors = append(ps.Errors, newError(posFromNode(ps.posMap[f]),
-				"Workflow `%s' must have an `on' attribute", f.Identifier))
+			ps.addError(ps.posMap[f], "Workflow `%s' must have an `on' attribute", f.Identifier)
 			// continue, checking other workflows
 		} else if !model.IsAllowedEventType(f.On) {
-			ps.Errors = append(ps.Errors, newError(posFromNode(ps.posMap[&f.On]),
-				"Workflow `%s' has unknown `on' value `%s'", f.Identifier, f.On))
+			ps.addError(ps.posMap[&f.On], "Workflow `%s' has unknown `on' value `%s'", f.Identifier, f.On)
 			// continue, checking other workflows
 		}
 
@@ -231,8 +212,7 @@ func (ps *parseState) checkFlows() {
 		for _, actionID := range f.Resolves {
 			_, ok := actionmap[actionID]
 			if !ok {
-				ps.Errors = append(ps.Errors, newError(posFromNode(ps.posMap[&f.Resolves]),
-					"Workflow `%s' resolves unknown action `%s'", f.Identifier, actionID))
+				ps.addError(ps.posMap[&f.Resolves], "Workflow `%s' resolves unknown action `%s'", f.Identifier, actionID)
 				// continue, checking other workflows
 			}
 		}
@@ -271,8 +251,7 @@ func (ps *parseState) analyzeNeeds(action *model.Action, actionmap map[string]*m
 	for _, need := range action.Needs {
 		_, ok := actionmap[need]
 		if !ok {
-			ps.Errors = append(ps.Errors, newError(posFromNode(ps.posMap[&action.Needs]),
-				"Action `%s' needs nonexistent action `%s'", action.Identifier, need))
+			ps.addError(ps.posMap[&action.Needs], "Action `%s' needs nonexistent action `%s'", action.Identifier, need)
 			// continue, checking other actions
 		}
 	}
@@ -289,7 +268,7 @@ func (ps *parseState) literalToStringMap(node ast.Node) map[string]string {
 	obj, ok := node.(*ast.ObjectType)
 
 	if !ok {
-		ps.Errors = append(ps.Errors, newError(posFromNode(node), "Expected object, got %s", typename(node)))
+		ps.addError(node, "Expected object, got %s", typename(node))
 		return nil
 	}
 
@@ -305,8 +284,7 @@ func (ps *parseState) literalToStringMap(node ast.Node) map[string]string {
 			key := ps.identString(item.Keys[0].Token)
 			if key != "" {
 				if _, found := ret[key]; found {
-					ps.Errors = append(ps.Errors, newWarning(posFromNode(node),
-						"Environment variable `%s' redefined", key))
+					ps.addWarning(node, "Environment variable `%s' redefined", key)
 				}
 				ret[key] = str
 			}
@@ -323,9 +301,9 @@ func (ps *parseState) identString(t token.Token) string {
 	case token.IDENT:
 		return t.Text
 	default:
-		ps.Errors = append(ps.Errors, newError(posFromToken(t),
+		ps.addErrorFromToken(t,
 			"Each identifier should be a string, got %s",
-			strings.ToLower(t.Type.String())))
+			strings.ToLower(t.Type.String()))
 		return ""
 	}
 }
@@ -345,13 +323,13 @@ func (ps *parseState) literalToStringArray(node ast.Node, promoteScalars bool) (
 		if promoteScalars && literal.Token.Type == token.STRING {
 			return []string{literal.Token.Value().(string)}, true
 		}
-		ps.Errors = append(ps.Errors, newError(posFromNode(node), "Expected list, got %s", typename(node)))
+		ps.addError(node, "Expected list, got %s", typename(node))
 		return nil, false
 	}
 
 	list, ok := node.(*ast.ListType)
 	if !ok {
-		ps.Errors = append(ps.Errors, newError(posFromNode(node), "Expected list, got %s", typename(node)))
+		ps.addError(node, "Expected list, got %s", typename(node))
 		return nil, false
 	}
 
@@ -393,14 +371,12 @@ func (ps *parseState) literalToInt(node ast.Node) (int64, bool) {
 func (ps *parseState) literalCast(node ast.Node, t token.Type) interface{} {
 	literal, ok := node.(*ast.LiteralType)
 	if !ok {
-		ps.Errors = append(ps.Errors, newError(posFromNode(node),
-			"Expected %s, got %s", strings.ToLower(t.String()), typename(node)))
+		ps.addError(node, "Expected %s, got %s", strings.ToLower(t.String()), typename(node))
 		return nil
 	}
 
 	if literal.Token.Type != t {
-		ps.Errors = append(ps.Errors, newError(posFromNode(node),
-			"Expected %s, got %s", strings.ToLower(t.String()), typename(node)))
+		ps.addError(node, "Expected %s, got %s", strings.ToLower(t.String()), typename(node))
 		return nil
 	}
 
@@ -414,7 +390,7 @@ func (ps *parseState) parseRoot(node ast.Node) {
 	if !ok {
 		// It should be impossible for HCL to return anything other than an
 		// ObjectList as the root node.  This error should never happen.
-		ps.Errors = append(ps.Errors, newError(posFromNode(node), "Internal error: root node must be an ObjectList"))
+		ps.addError(node, "Internal error: root node must be an ObjectList")
 		return
 	}
 
@@ -434,7 +410,7 @@ func (ps *parseState) parseRoot(node ast.Node) {
 // appending it to ps.Actions or ps.Workflows as appropriate.
 func (ps *parseState) parseBlock(item *ast.ObjectItem, identifiers map[string]bool) {
 	if len(item.Keys) != 2 {
-		ps.Errors = append(ps.Errors, newError(posFromNode(item), "Invalid toplevel declaration"))
+		ps.addError(item, "Invalid toplevel declaration")
 		return
 	}
 
@@ -455,12 +431,12 @@ func (ps *parseState) parseBlock(item *ast.ObjectItem, identifiers map[string]bo
 			ps.Workflows = append(ps.Workflows, workflow)
 		}
 	default:
-		ps.Errors = append(ps.Errors, newError(posFromNode(item), "Invalid toplevel keyword, `%s'", cmd))
+		ps.addError(item, "Invalid toplevel keyword, `%s'", cmd)
 		return
 	}
 
 	if identifiers[id] {
-		ps.Errors = append(ps.Errors, newError(posFromNode(item), "Identifier `%s' redefined", id))
+		ps.addError(item, "Identifier `%s' redefined", id)
 	}
 
 	identifiers[id] = true
@@ -471,11 +447,11 @@ func (ps *parseState) parseBlock(item *ast.ObjectItem, identifiers map[string]bo
 func (ps *parseState) parseVersion(idx int, item *ast.ObjectItem) {
 	if len(item.Keys) != 1 || ps.identString(item.Keys[0].Token) != "version" {
 		// not a valid `version` declaration
-		ps.Errors = append(ps.Errors, newError(posFromNode(item.Val), "Toplevel declarations cannot be assignments"))
+		ps.addError(item.Val, "Toplevel declarations cannot be assignments")
 		return
 	}
 	if idx != 0 {
-		ps.Errors = append(ps.Errors, newError(posFromNode(item.Val), "`version` must be the first declaration"))
+		ps.addError(item.Val, "`version` must be the first declaration")
 		return
 	}
 	version, ok := ps.literalToInt(item.Val)
@@ -483,7 +459,7 @@ func (ps *parseState) parseVersion(idx int, item *ast.ObjectItem) {
 		return
 	}
 	if version < minVersion || version > maxVersion {
-		ps.Errors = append(ps.Errors, newError(posFromNode(item.Val), "`version = %d` is not supported", version))
+		ps.addError(item.Val, "`version = %d` is not supported", version)
 		return
 	}
 	ps.Version = int(version)
@@ -494,7 +470,7 @@ func (ps *parseState) parseVersion(idx int, item *ast.ObjectItem) {
 func (ps *parseState) parseIdentifier(key *ast.ObjectKey) string {
 	id := key.Token.Text
 	if len(id) < 3 || id[0] != '"' || id[len(id)-1] != '"' {
-		ps.Errors = append(ps.Errors, newError(posFromNode(key), "Invalid format for identifier `%s'", id))
+		ps.addError(key, "Invalid format for identifier `%s'", id)
 		return ""
 	}
 	return id[1 : len(id)-1]
@@ -504,20 +480,18 @@ func (ps *parseState) parseIdentifier(key *ast.ObjectKey) string {
 // out-parameter `value` and returning true if successful.
 func (ps *parseState) parseRequiredString(value *string, val ast.Node, nodeType, name, id string) bool {
 	if *value != "" {
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(val), "`%s' redefined in %s `%s'", name, nodeType, id))
+		ps.addWarning(val, "`%s' redefined in %s `%s'", name, nodeType, id)
 		// continue, allowing the redefinition
 	}
 
 	newVal, ok := ps.literalToString(val)
 	if !ok {
-		ps.Errors = append(ps.Errors, newError(posFromNode(val),
-			"Invalid format for `%s' in %s `%s', expected string", name, nodeType, id))
+		ps.addError(val, "Invalid format for `%s' in %s `%s', expected string", name, nodeType, id)
 		return false
 	}
 
 	if newVal == "" {
-		ps.Errors = append(ps.Errors, newError(posFromNode(val),
-			"`%s' value in %s `%s' cannot be blank", name, nodeType, id))
+		ps.addError(val, "`%s' value in %s `%s' cannot be blank", name, nodeType, id)
 		return false
 	}
 
@@ -536,7 +510,7 @@ func (ps *parseState) parseBlockPreamble(item *ast.ObjectItem, nodeType string) 
 	node := item.Val
 	obj, ok := node.(*ast.ObjectType)
 	if !ok {
-		ps.Errors = append(ps.Errors, newError(posFromNode(node), "Each %s must have an { ...  } block", nodeType))
+		ps.addError(node, "Each %s must have an { ...  } block", nodeType)
 		return "", nil
 	}
 
@@ -597,7 +571,7 @@ func (ps *parseState) parseActionAttribute(name string, action *model.Action, va
 			ps.posMap[&action.Secrets] = val
 		}
 	default:
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(val), "Unknown action attribute `%s'", name))
+		ps.addWarning(val, "Unknown action attribute `%s'", name)
 	}
 }
 
@@ -605,8 +579,7 @@ func (ps *parseState) parseActionAttribute(name string, action *model.Action, va
 // node.  This function enforces formatting requirements on the value.
 func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 	if action.Uses.Path != "" {
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(node),
-			"`uses' redefined in action `%s'", action.Identifier))
+		ps.addWarning(node, "`uses' redefined in action `%s'", action.Identifier)
 		// continue, allowing the redefinition
 	}
 	strVal, ok := ps.literalToString(node)
@@ -615,8 +588,7 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 	}
 
 	if strVal == "" {
-		ps.Errors = append(ps.Errors, newError(posFromNode(node),
-			"`uses' value in action `%s' cannot be blank", action.Identifier))
+		ps.addError(node, "`uses' value in action `%s' cannot be blank", action.Identifier)
 		return
 	}
 	action.Uses.Raw = strVal
@@ -633,15 +605,13 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 
 	tok := strings.Split(strVal, "@")
 	if len(tok) != 2 {
-		ps.Errors = append(ps.Errors, newError(posFromNode(node),
-			"The `uses' attribute must be a path, a Docker image, or owner/repo@ref"))
+		ps.addError(node, "The `uses' attribute must be a path, a Docker image, or owner/repo@ref")
 		return
 	}
 	ref := tok[1]
 	tok = strings.SplitN(tok[0], "/", 3)
 	if len(tok) < 2 {
-		ps.Errors = append(ps.Errors, newError(posFromNode(node),
-			"The `uses' attribute must be a path, a Docker image, or owner/repo@ref"))
+		ps.addError(node, "The `uses' attribute must be a path, a Docker image, or owner/repo@ref")
 		return
 	}
 	action.Uses.Ref = ref
@@ -658,8 +628,7 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 // requirements on the value.
 func (ps *parseState) parseCommand(action *model.Action, dest *model.ActionCommand, name string, node ast.Node, allowBlank bool) {
 	if len(dest.Parsed) > 0 {
-		ps.Errors = append(ps.Errors, newWarning(posFromNode(node),
-			"`%s' redefined in action `%s'", name, action.Identifier))
+		ps.addWarning(node, "`%s' redefined in action `%s'", name, action.Identifier)
 		// continue, allowing the redefinition
 	}
 
@@ -675,13 +644,11 @@ func (ps *parseState) parseCommand(action *model.Action, dest *model.ActionComma
 	var raw string
 	var ok bool
 	if raw, ok = ps.literalToString(node); !ok {
-		ps.Errors = append(ps.Errors, newError(posFromNode(node),
-			"The `%s' attribute must be a string or a list", name))
+		ps.addError(node, "The `%s' attribute must be a string or a list", name)
 		return
 	}
 	if raw == "" && !allowBlank {
-		ps.Errors = append(ps.Errors, newError(posFromNode(node),
-			"`%s' value in action `%s' cannot be blank", name, action.Identifier))
+		ps.addError(node, "`%s' value in action `%s' cannot be blank", name, action.Identifier)
 		return
 	}
 	dest.Raw = raw
@@ -721,20 +688,17 @@ func (ps *parseState) workflowifyItem(item *ast.ObjectItem) *model.Workflow {
 			}
 		case "resolves":
 			if workflow.Resolves != nil {
-				ps.Errors = append(ps.Errors, newWarning(posFromNode(item.Val),
-					"`resolves' redefined in workflow `%s'", id))
+				ps.addWarning(item.Val, "`resolves' redefined in workflow `%s'", id)
 				// continue, allowing the redefinition
 			}
 			workflow.Resolves, ok = ps.literalToStringArray(item.Val, true)
 			ps.posMap[&workflow.Resolves] = item
 			if !ok {
-				ps.Errors = append(ps.Errors, newError(posFromNode(item.Val),
-					"Invalid format for `resolves' in workflow `%s', expected list of strings", id))
+				ps.addError(item.Val, "Invalid format for `resolves' in workflow `%s', expected list of strings", id)
 				// continue, allowing workflow with no `resolves`
 			}
 		default:
-			ps.Errors = append(ps.Errors, newWarning(posFromNode(item.Val),
-				"Unknown workflow attribute `%s'", name))
+			ps.addWarning(item.Val, "Unknown workflow attribute `%s'", name)
 			// continue, treat as no-op
 		}
 	}
@@ -758,8 +722,7 @@ func (ps *parseState) checkAssignmentsOnly(objectList *ast.ObjectList, actionID 
 			} else {
 				desc = fmt.Sprintf("action `%s'", actionID)
 			}
-			ps.Errors = append(ps.Errors, newError(posFromObjectItem(item),
-				"Each attribute of %s must be an assignment", desc))
+			ps.addErrorFromObjectItem(item, "Each attribute of %s must be an assignment", desc)
 			continue
 		}
 
@@ -767,6 +730,36 @@ func (ps *parseState) checkAssignmentsOnly(objectList *ast.ObjectList, actionID 
 		if ok {
 			ps.checkAssignmentsOnly(child.List, actionID)
 		}
+	}
+}
+
+func (ps *parseState) addWarning(node ast.Node, format string, a ...interface{}) {
+	if ps.suppressSeverity < WARNING {
+		ps.Errors = append(ps.Errors, newWarning(posFromNode(node), format, a...))
+	}
+}
+
+func (ps *parseState) addError(node ast.Node, format string, a ...interface{}) {
+	if ps.suppressSeverity < ERROR {
+		ps.Errors = append(ps.Errors, newError(posFromNode(node), format, a...))
+	}
+}
+
+func (ps *parseState) addErrorFromToken(t token.Token, format string, a ...interface{}) {
+	if ps.suppressSeverity < ERROR {
+		ps.Errors = append(ps.Errors, newError(posFromToken(t), format, a...))
+	}
+}
+
+func (ps *parseState) addErrorFromObjectItem(objectItem *ast.ObjectItem, format string, a ...interface{}) {
+	if ps.suppressSeverity < ERROR {
+		ps.Errors = append(ps.Errors, newError(posFromObjectItem(objectItem), format, a...))
+	}
+}
+
+func (ps *parseState) addFatal(node ast.Node, format string, a ...interface{}) {
+	if ps.suppressSeverity < FATAL {
+		ps.Errors = append(ps.Errors, newFatal(posFromNode(node), format, a...))
 	}
 }
 
