@@ -61,7 +61,6 @@ func Parse(reader io.Reader, options ...OptionFunc) (*model.Configuration, error
 	}
 
 	return &model.Configuration{
-		Version:   ps.Version,
 		Actions:   ps.Actions,
 		Workflows: ps.Workflows,
 	}, nil
