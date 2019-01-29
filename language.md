@@ -176,7 +176,7 @@ fragment DIGEST_ALGORITHM                : DIGEST_ALGORITHM_COMPONENT ( DIGEST_A
 fragment DIGEST_ALGORITHM_SEPERATOR      : [+.-_];
 fragment DIGEST_ALGORITHM_COMPONENT      : [A-Za-z] ALPHANUM*;
 
-LOCAL_USES : '"./' (~[/"]+ '/')* (~[/"]+ '/'?) '"';
+LOCAL_USES : '"./' SAFECODEPOINT* '"';
 
 REMOTE_USES : '"' GITHUB_OWNER '/' GITHUB_REPO ('/' ~[/"]+)* '/'? '@' ~'/'? ~(["?*[ ^~:\\] | '\u0000'..'\u001F')+ ~([./])? '"';
 
