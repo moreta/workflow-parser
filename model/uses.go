@@ -9,7 +9,7 @@ type uses interface {
 	isUses()
 }
 
-// UsesDockerRegistry represents `uses = "docker://image"`
+// UsesDockerImage represents `uses = "docker://image"`
 type UsesDockerImage struct {
 	Image string
 }
