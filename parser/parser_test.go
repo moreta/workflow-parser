@@ -48,7 +48,6 @@ func TestActionsAndAttributes(t *testing.T) {
 			secrets=[ "THE", "CURRENCY", "OF", "INTIMACY" ]
 		}`)
 	assertParseSuccess(t, err, 2, 0, workflow)
-	assert.Equal(t, 0, workflow.Version)
 
 	actionA := workflow.Actions[0]
 	assert.Equal(t, "a", actionA.Identifier)
@@ -81,7 +80,6 @@ func TestStringEscaping(t *testing.T) {
 func TestFileVersion0(t *testing.T) {
 	workflow, err := parseString(`"version"=0 action "a" { uses="./foo" }`)
 	assertParseSuccess(t, err, 1, 0, workflow)
-	assert.Equal(t, 0, workflow.Version)
 }
 
 func TestFileVersion42(t *testing.T) {
@@ -168,7 +166,6 @@ func TestCircularDependencyOther(t *testing.T) {
 func TestFlowMapping(t *testing.T) {
 	workflow, err := parseString(`"workflow" "foo" { "on" = "push" resolves = ["a", "b"] } action "a" { uses="./x" } action "b" { uses="./y" }`)
 	assertParseSuccess(t, err, 2, 1, workflow)
-	assert.Equal(t, 0, workflow.Version)
 	assert.Equal(t, "push", workflow.Workflows[0].On)
 	assert.ElementsMatch(t, []string{"a", "b"}, workflow.Workflows[0].Resolves)
 }
@@ -176,7 +173,6 @@ func TestFlowMapping(t *testing.T) {
 func TestFlowOneResolve(t *testing.T) {
 	workflow, err := parseString(`workflow "foo" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
 	assertParseSuccess(t, err, 1, 1, workflow)
-	assert.Equal(t, 0, workflow.Version)
 	assert.Equal(t, "push", workflow.Workflows[0].On)
 	assert.Len(t, workflow.Workflows[0].Resolves[0], 1)
 	assert.Equal(t, "a", workflow.Workflows[0].Resolves[0])
@@ -185,7 +181,6 @@ func TestFlowOneResolve(t *testing.T) {
 func TestFlowNoResolves(t *testing.T) {
 	workflow, err := parseString(`workflow "foo" { on = "push"}`)
 	assertParseSuccess(t, err, 0, 1, workflow)
-	assert.Equal(t, 0, workflow.Version)
 	assert.Equal(t, "push", workflow.Workflows[0].On)
 	assert.Len(t, workflow.Workflows[0].Resolves, 0)
 	assert.Empty(t, workflow.Workflows[0].Resolves)
@@ -381,7 +376,6 @@ func TestUsesCustomActionsShortPath(t *testing.T) {
 func TestTwoFlows(t *testing.T) {
 	workflow, err := parseString(`workflow "foo" { on = "push" resolves = "a" } workflow "bar" { on = "push" resolves = "a" } action "a" { uses="./x" }`)
 	assertParseSuccess(t, err, 1, 2, workflow)
-	assert.Equal(t, 0, workflow.Version)
 	assert.Equal(t, "push", workflow.Workflows[0].On)
 	assert.Len(t, workflow.Workflows[0].Resolves[0], 1)
 	assert.Equal(t, "a", workflow.Workflows[0].Resolves[0])

@@ -2,7 +2,6 @@ package model
 
 // Configuration is a parsed main.workflow file
 type Configuration struct {
-	Version   int
 	Actions   []*Action
 	Workflows []*Workflow
 }
