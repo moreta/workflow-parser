@@ -127,9 +127,7 @@ workflow_file : version? (workflow | action)* ;
 
 version : 'version' '=' INTEGER;
 
-workflow : 'workflow' str '{' workflow_kvp '}' ;
-
-workflow_kvp : (on_kvp | resolves_kvp)*;
+workflow : 'workflow' str '{' (on_kvp | resolves_kvp)* '}' ;
 
 on_kvp : 'on' '=' event_string ;
 
@@ -139,9 +137,9 @@ string_or_array : str | string_array ;
 
 string_array : '[' (( str ',' )* str ','?)? ']' ;
 
-action : 'action' str '{' action_kvp '}' ;
+action : 'action' str '{' action_kvps '}' ;
 
-action_kvp : (uses_kvp | needs_kvp | runs_kvp | args_kvp | env_kvp | secrets_kvp)*;
+action_kvps : (uses_kvp | needs_kvp | runs_kvp | args_kvp | env_kvp | secrets_kvp)*;
 
 uses_kvp : 'uses' '=' (DOCKER_USES | LOCAL_USES | REMOTE_USES) ;
 
