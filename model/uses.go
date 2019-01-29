@@ -9,7 +9,7 @@ package model
 // The parser fills in the other parts of the struct when they're set.
 // So, the first form leaves "Repo" and "Ref" empty, and the second form
 // optionally leaves "Path" empty.
-type ActionUses struct {
+type Uses struct {
 	Repo  string
 	Path  string
 	Ref   string
@@ -35,7 +35,7 @@ const (
 )
 
 // Form returns a string describing the nature of the Action: in-repo, cross-repo, or docker image.
-func (u ActionUses) Form() ActionUsesForm {
+func (u Uses) Form() ActionUsesForm {
 	if u.Image != "" {
 		return DockerImageUsesForm
 	}

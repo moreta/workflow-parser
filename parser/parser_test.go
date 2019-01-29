@@ -53,7 +53,7 @@ func TestActionsAndAttributes(t *testing.T) {
 	actionA := workflow.Actions[0]
 	assert.Equal(t, "a", actionA.Identifier)
 	assert.Equal(t, 0, len(actionA.Needs))
-	assert.Equal(t, model.ActionUses{Path: "./x", Raw: "./x"}, actionA.Uses)
+	assert.Equal(t, model.Uses{Path: "./x", Raw: "./x"}, actionA.Uses)
 	assert.Equal(t, "cmd", actionA.Runs.Raw)
 	assert.Equal(t, []string{"cmd"}, actionA.Runs.Parsed)
 	assert.Equal(t, "", actionA.Args.Raw)
@@ -61,7 +61,7 @@ func TestActionsAndAttributes(t *testing.T) {
 
 	actionB := workflow.Actions[1]
 	assert.Equal(t, "b", actionB.Identifier)
-	assert.Equal(t, model.ActionUses{Path: "./y", Raw: "./y"}, actionB.Uses)
+	assert.Equal(t, model.Uses{Path: "./y", Raw: "./y"}, actionB.Uses)
 	assert.Equal(t, []string{"a"}, actionB.Needs)
 	assert.Equal(t, "", actionB.Runs.Raw)
 	assert.Equal(t, "", actionB.Args.Raw)
@@ -201,19 +201,19 @@ func TestUses(t *testing.T) {
 	assertParseSuccess(t, err, 4, 0, workflow)
 	a := workflow.GetAction("a")
 	if assert.NotNil(t, a) {
-		assert.Equal(t, model.ActionUses{Repo: "foo/bar", Path: "/", Ref: "dev", Raw: "foo/bar@dev"}, a.Uses)
+		assert.Equal(t, model.Uses{Repo: "foo/bar", Path: "/", Ref: "dev", Raw: "foo/bar@dev"}, a.Uses)
 	}
 	b := workflow.GetAction("b")
 	if assert.NotNil(t, b) {
-		assert.Equal(t, model.ActionUses{Repo: "foo/bar", Path: "/path", Ref: "1.0.0", Raw: "foo/bar/path@1.0.0"}, b.Uses)
+		assert.Equal(t, model.Uses{Repo: "foo/bar", Path: "/path", Ref: "1.0.0", Raw: "foo/bar/path@1.0.0"}, b.Uses)
 	}
 	c := workflow.GetAction("c")
 	if assert.NotNil(t, c) {
-		assert.Equal(t, model.ActionUses{Path: "./xyz", Raw: "./xyz"}, c.Uses)
+		assert.Equal(t, model.Uses{Path: "./xyz", Raw: "./xyz"}, c.Uses)
 	}
 	d := workflow.GetAction("d")
 	if assert.NotNil(t, d) {
-		assert.Equal(t, model.ActionUses{Image: "alpine", Raw: "docker://alpine"}, d.Uses)
+		assert.Equal(t, model.Uses{Image: "alpine", Raw: "docker://alpine"}, d.Uses)
 	}
 }
 
