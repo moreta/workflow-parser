@@ -12,7 +12,7 @@ There is a language specification, by example and by BNF grammar, in
 # Using the parser
 
 ```go
-import "github.com/github/actions-parser/parser"
+import "github.com/actions/workflow-parser/parser"
 ...
 config, err := parser.Parse(reader)
 ```
