@@ -155,7 +155,7 @@ secrets_kvp : 'secrets' '=' ident_array ;
 
 env_var : IDENTIFIER '=' str ;
 
-ident_array : '[' ((QUOTED_IDENTIFIER ',')* QUOTED_IDENTIFIER ','?) ']';
+ident_array : '[' ((QUOTED_IDENTIFIER ',')* QUOTED_IDENTIFIER ','?)? ']';
 
 event_string : QUOTED_IDENTIFIER ;
 
