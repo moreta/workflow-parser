@@ -187,7 +187,7 @@ fragment GITHUB_REPO : [a-zA-Z0-9\-_.]+ ;
 // before STRING to win on priority (all identifiers are valid strings)
 QUOTED_IDENTIFIER : '"' IDENTIFIER '"';
 
-IDENTIFIER : [a-zA-Z] [a-zA-Z0-9_]*;
+IDENTIFIER : [a-zA-Z_] [a-zA-Z0-9_]*;
 
 STRING
    : '"' ( ESC | SAFECODEPOINT )* '"'
