@@ -157,8 +157,7 @@ env_var : IDENTIFIER '=' str ;
 
 ident_array : '[' ((QUOTED_IDENTIFIER ',')* QUOTED_IDENTIFIER ','?) ']';
 
-// TODO limit to available events
-event_string : str ;
+event_string : QUOTED_IDENTIFIER ;
 
 str : QUOTED_IDENTIFIER | STRING;
 
