@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/github/actions-parser/model"
+	"github.com/actions/workflow-parser/model"
 )
 
 type ParserError struct {
