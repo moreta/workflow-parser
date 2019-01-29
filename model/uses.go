@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type actionUses interface {
+type uses interface {
 	fmt.Stringer
 	Form() ActionUsesForm
 }
