@@ -625,8 +625,8 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 // parseUses sets the action.Runs or action.Command value based on the
 // contents of the AST node.  This function enforces formatting
 // requirements on the value.
-func (ps *parseState) parseCommand(action *model.Action, dest *model.ActionCommand, name string, node ast.Node, allowBlank bool) {
-	if len(dest.Parsed) > 0 {
+func (ps *parseState) parseCommand(action *model.Action, dest *[]string, name string, node ast.Node, allowBlank bool) {
+	if len(*dest) > 0 {
 		ps.addWarning(node, "`%s' redefined in action `%s'", name, action.Identifier)
 		// continue, allowing the redefinition
 	}
@@ -634,7 +634,7 @@ func (ps *parseState) parseCommand(action *model.Action, dest *model.ActionComma
 	// Is it a list?
 	if _, ok := node.(*ast.ListType); ok {
 		if parsed, ok := ps.literalToStringArray(node, false); ok {
-			dest.Parsed = parsed
+			*dest = parsed
 		}
 		return
 	}
@@ -650,8 +650,7 @@ func (ps *parseState) parseCommand(action *model.Action, dest *model.ActionComma
 		ps.addError(node, "`%s' value in action `%s' cannot be blank", name, action.Identifier)
 		return
 	}
-	dest.Raw = raw
-	dest.Parsed = strings.Fields(raw)
+	*dest = strings.Fields(raw)
 }
 
 func typename(val interface{}) string {
