@@ -118,57 +118,97 @@ action "goal2" {
 
 # Grammar
 
-```
-WORKFLOW_FILE ::= [VERSION] BLOCK*
+The below is an [ANTLR4](https://github.com/antlr/antlr4) grammar specifying the Actions Workflow language. As a spec, it is likely not the best basis for a real parser. For instance, no effort has been made to make the grammar output intuitive errors.
 
-VERSION ::= "version" "=" INTEGER
+```g4
+grammar workflow;
 
-INTEGER ::= "0" | /^ [1-9][0-9]* $/x
+workflow_file : version? (workflow | action)* ;
 
-BLOCK ::= WORKFLOW | ACTION
+version : 'version' '=' INTEGER;
 
-WORKFLOW ::= "workflow" STRING "{" WORKFLOW_KVP* "}"
+workflow : 'workflow' str '{' (on_kvp | resolves_kvp)* '}' ;
 
-# STRING is a double-quoted UTF-8 string with optional escape characters,
-# as used in HCL, Go, and C, among others.
+on_kvp : 'on' '=' event_string ;
 
-WORKFLOW_KVP ::= ON_KVP | RESOLVES_KVP
+resolves_kvp : 'resolves' '=' string_or_array ;
 
-ON_KVP ::= "on" "=" EVENT_STRING
+string_or_array : str | string_array ;
 
-EVENT_STRING ::= STRING   # from the allowable set
+string_array : '[' (( str ',' )* str ','?)? ']' ;
 
-RESOLVES_KVP ::= "resolves" "=" STRING_OR_ARRAY
+action : 'action' str '{' action_kvps '}' ;
 
-STRING_OR_ARRAY ::= STRING | STRING_ARRAY
+action_kvps : (uses_kvp | needs_kvp | runs_kvp | args_kvp | env_kvp | secrets_kvp)*;
 
-STRING_ARRAY ::= EMPTY_ARRAY | "[" ( STRING "," )* STRING "]"
+uses_kvp : 'uses' '=' (DOCKER_USES | LOCAL_USES | REMOTE_USES) ;
 
-EMPTY_ARRAY ::= "[" "]"
+needs_kvp : 'needs' '=' string_or_array ;
 
-ACTION ::= "action" STRING "{" ACTION_KVP* "}"
+runs_kvp : 'runs' '=' string_or_array ;
 
-ACTION_KVP ::= USES_KVP | NEEDS_KVP | RUNS_KVP | ARGS_KVP | ENV_KVP | SECRETS_KVP
+args_kvp : 'args' '=' string_or_array ;
 
-USES_KVP ::= "uses" "=" USES_STRING
+env_kvp : 'env' '=' '{' env_var* '}' ;
 
-USES_STRING ::= /^ " ( \.\/\.* | \w+\/\w+\/.*@\w+ | docker:\/\/.* " $/x
+secrets_kvp : 'secrets' '=' ident_array ;
 
-NEEDS_KVP ::= "needs" "=" STRING_OR_ARRAY
+env_var : IDENTIFIER '=' str ;
 
-RUNS_KVP ::= "runs" "=" STRING_OR_ARRAY
+ident_array : '[' ((QUOTED_IDENTIFIER ',')* QUOTED_IDENTIFIER ','?)? ']';
 
-ARGS_KVP ::= "args" "=" STRING_OR_ARRAY
+event_string : QUOTED_IDENTIFIER ;
 
-ENV_KVP ::= "env" "=" "{" ENV_VAR* "}"
+str : QUOTED_IDENTIFIER | STRING;
 
-ENV_VAR ::= IDENTIFIER "=" STRING
+// https://github.com/docker/distribution/blob/b75069ef13a1de846c0cdf964f5917f5b00c1a47/reference/reference.go
+DOCKER_USES: '"docker://' (DOCKER_REGISTRY '/')? DOCKER_PATH_COMPONENT ('/' DOCKER_PATH_COMPONENT)* ( DOCKER_TAG |  DOCKER_DIGEST )? '"';
 
-IDENTIFIER ::= /^ [_a-z] [_0-9a-z]* $/xi
+DOCKER_REGISTRY : HOST_COMPONENT ('.' HOST_COMPONENT)* (':' INTEGER)? ;
 
-SECRETS_KVP ::= "secrets" "=" IDENT_STRING_ARRAY
+fragment DOCKER_PATH_COMPONENT : ALPHANUM+ ([._-] ALPHANUM+)*;
+fragment HOST_COMPONENT : ALPHANUM | ALPHANUM [a-zA-Z0-9-]* ALPHANUM;
 
-IDENT_STRING_ARRAY ::= EMPTY_ARRAY | "[" ( IDENT_STRING "," )* IDENT_STRING "]"
+DOCKER_TAG : ':' [a-zA-Z0-9_]+ ;
 
-IDENT_STRING = "[" IDENTIFIER "]"
+DOCKER_DIGEST                            : '@' DIGEST_ALGORITHM ':' HEX+ ;
+fragment DIGEST_ALGORITHM                : DIGEST_ALGORITHM_COMPONENT ( DIGEST_ALGORITHM_SEPERATOR DIGEST_ALGORITHM_COMPONENT )*;
+fragment DIGEST_ALGORITHM_SEPERATOR      : [+.-_];
+fragment DIGEST_ALGORITHM_COMPONENT      : [A-Za-z] ALPHANUM*;
+
+LOCAL_USES : '"./' SAFECODEPOINT* '"';
+
+REMOTE_USES : '"' GITHUB_OWNER '/' GITHUB_REPO ('/' ~[/"]+)* '/'? '@' ~'/'? ~(["?*[ ^~:\\] | '\u0000'..'\u001F')+ ~([./])? '"';
+
+// alphanums, and hyphens not at start or end
+fragment GITHUB_OWNER : ALPHANUM+ ([a-zA-Z0-9\-]* ALPHANUM+)*?;
+fragment GITHUB_REPO : [a-zA-Z0-9\-_.]+ ;
+
+// before STRING to win on priority (all identifiers are valid strings)
+QUOTED_IDENTIFIER : '"' IDENTIFIER '"';
+
+IDENTIFIER : [a-zA-Z_] [a-zA-Z0-9_]*;
+
+STRING
+   : '"' ( ESC | SAFECODEPOINT )* '"'
+   ;
+
+fragment ESC
+   : '\\' ( ["\\/bfnrt] )
+   ;
+
+fragment SAFECODEPOINT
+   : ~ ["\\\u0000-\u001F\u007F]
+   ;
+
+LINE_COMMENT
+    :   ('#' | '//') ~[\r\n]*
+        -> skip
+    ;
+
+fragment ALPHANUM : [a-zA-Z0-9];
+fragment HEX : [0-9a-fA-F]+;
+INTEGER : [0-9]+;
+
+WS : [\n \t\r] -> skip;
 ```
