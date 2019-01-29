@@ -23,7 +23,7 @@ type Uses struct {
 
 type actionUses interface {
 	fmt.Stringer
-	Form() string
+	Form() ActionUsesForm
 }
 
 // UsesDockerRegistry represents `uses = "docker://image"`
@@ -43,9 +43,9 @@ type UsesPath struct {
 	Path string
 }
 
-func (u *UsesDockerImage) Form() string { return string(DockerImageUsesForm) }
-func (u *UsesRepository) Form() string  { return string(CrossRepoUsesForm) }
-func (u *UsesPath) Form() string        { return string(InRepoUsesForm) }
+func (u *UsesDockerImage) Form() ActionUsesForm { return DockerImageUsesForm }
+func (u *UsesRepository) Form() ActionUsesForm  { return CrossRepoUsesForm }
+func (u *UsesPath) Form() ActionUsesForm        { return InRepoUsesForm }
 
 func (u *UsesDockerImage) String() string {
 	return fmt.Sprintf("docker://%s", u.Image)
@@ -60,7 +60,7 @@ func (u *UsesRepository) String() string {
 }
 
 func (u *UsesPath) String() string {
-	return "." + u.Path
+	return u.Path
 }
 
 // ActionUsesForm is which of the "uses" forms specified by an action.

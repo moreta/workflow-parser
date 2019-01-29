@@ -145,7 +145,7 @@ func (ps *parseState) checkActions() {
 	secrets := make(map[string]bool)
 	for _, t := range ps.Actions {
 		// Ensure the Action has a `uses` attribute
-		if t.Uses.Raw == "" {
+		if t.Uses == nil {
 			ps.addError(ps.posMap[t], "Action `%s' must have a `uses' attribute", t.Identifier)
 			// continue, checking other actions
 		}
@@ -578,7 +578,7 @@ func (ps *parseState) parseActionAttribute(name string, action *model.Action, va
 // parseUses sets the action.Uses value based on the contents of the AST
 // node.  This function enforces formatting requirements on the value.
 func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
-	if action.Uses.Path != "" {
+	if action.Uses != nil {
 		ps.addWarning(node, "`uses' redefined in action `%s'", action.Identifier)
 		// continue, allowing the redefinition
 	}
@@ -591,15 +591,13 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 		ps.addError(node, "`uses' value in action `%s' cannot be blank", action.Identifier)
 		return
 	}
-	action.Uses.Raw = strVal
 	if strings.HasPrefix(strVal, "./") {
-		action.Uses.Path = strVal
-		// Repo and Ref left blank
+		action.Uses = &model.UsesPath{Path: strVal}
 		return
 	}
 
 	if strings.HasPrefix(strVal, "docker://") {
-		action.Uses.Image = strings.TrimPrefix(strVal, "docker://")
+		action.Uses = &model.UsesDockerImage{Image: strings.TrimPrefix(strVal, "docker://")}
 		return
 	}
 
@@ -614,12 +612,10 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 		ps.addError(node, "The `uses' attribute must be a path, a Docker image, or owner/repo@ref")
 		return
 	}
-	action.Uses.Ref = ref
-	action.Uses.Repo = tok[0] + "/" + tok[1]
+	usesRepo := &model.UsesRepository{Repository: tok[0] + "/" + tok[1], Ref: ref, Path: "/"}
+	action.Uses = usesRepo
 	if len(tok) == 3 {
-		action.Uses.Path = "/" + tok[2]
-	} else {
-		action.Uses.Path = "/"
+		usesRepo.Path = "/" + tok[2]
 	}
 }
 

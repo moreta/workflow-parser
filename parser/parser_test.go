@@ -53,7 +53,7 @@ func TestActionsAndAttributes(t *testing.T) {
 	actionA := workflow.Actions[0]
 	assert.Equal(t, "a", actionA.Identifier)
 	assert.Equal(t, 0, len(actionA.Needs))
-	assert.Equal(t, model.Uses{Path: "./x", Raw: "./x"}, actionA.Uses)
+	assert.Equal(t, &model.UsesPath{Path: "./x"}, actionA.Uses)
 	assert.Equal(t, "cmd", actionA.Runs.Raw)
 	assert.Equal(t, []string{"cmd"}, actionA.Runs.Parsed)
 	assert.Equal(t, "", actionA.Args.Raw)
@@ -61,7 +61,7 @@ func TestActionsAndAttributes(t *testing.T) {
 
 	actionB := workflow.Actions[1]
 	assert.Equal(t, "b", actionB.Identifier)
-	assert.Equal(t, model.Uses{Path: "./y", Raw: "./y"}, actionB.Uses)
+	assert.Equal(t, &model.UsesPath{Path: "./y"}, actionB.Uses)
 	assert.Equal(t, []string{"a"}, actionB.Needs)
 	assert.Equal(t, "", actionB.Runs.Raw)
 	assert.Equal(t, "", actionB.Args.Raw)
@@ -75,7 +75,7 @@ func TestStringEscaping(t *testing.T) {
 			uses="./x \" y \\ z"
 		}`)
 	assertParseSuccess(t, err, 1, 0, workflow)
-	assert.Equal(t, `./x " y \ z`, workflow.Actions[0].Uses.Raw)
+	assert.Equal(t, `./x " y \ z`, workflow.Actions[0].Uses.String())
 }
 
 func TestFileVersion0(t *testing.T) {
@@ -201,29 +201,35 @@ func TestUses(t *testing.T) {
 	assertParseSuccess(t, err, 4, 0, workflow)
 	a := workflow.GetAction("a")
 	if assert.NotNil(t, a) {
-		assert.Equal(t, model.Uses{Repo: "foo/bar", Path: "/", Ref: "dev", Raw: "foo/bar@dev"}, a.Uses)
+		assert.Equal(t, &model.UsesRepository{Repository: "foo/bar", Path: "/", Ref: "dev"}, a.Uses)
 	}
 	b := workflow.GetAction("b")
 	if assert.NotNil(t, b) {
-		assert.Equal(t, model.Uses{Repo: "foo/bar", Path: "/path", Ref: "1.0.0", Raw: "foo/bar/path@1.0.0"}, b.Uses)
+		assert.Equal(t, &model.UsesRepository{Repository: "foo/bar", Path: "/path", Ref: "1.0.0"}, b.Uses)
 	}
 	c := workflow.GetAction("c")
 	if assert.NotNil(t, c) {
-		assert.Equal(t, model.Uses{Path: "./xyz", Raw: "./xyz"}, c.Uses)
+		assert.Equal(t, &model.UsesPath{Path: "./xyz"}, c.Uses)
 	}
 	d := workflow.GetAction("d")
 	if assert.NotNil(t, d) {
-		assert.Equal(t, model.Uses{Image: "alpine", Raw: "docker://alpine"}, d.Uses)
+		assert.Equal(t, &model.UsesDockerImage{Image: "alpine"}, d.Uses)
 	}
 }
 
 func TestUsesFailures(t *testing.T) {
 	workflow, err := parseString(`action "a" { uses="foo" }`)
-	assertParseError(t, err, 1, 0, workflow, "the `uses' attribute must be a path, a docker image, or owner/repo@ref")
+	assertParseError(t, err, 1, 0, workflow,
+		"the `uses' attribute must be a path, a docker image, or owner/repo@ref",
+		"action `a' must have a `uses' attribute")
 	workflow, err = parseString(`action "a" { uses="foo/bar" }`)
-	assertParseError(t, err, 1, 0, workflow, "the `uses' attribute must be a path, a docker image, or owner/repo@ref")
+	assertParseError(t, err, 1, 0, workflow,
+		"the `uses' attribute must be a path, a docker image, or owner/repo@ref",
+		"action `a' must have a `uses' attribute")
 	workflow, err = parseString(`action "a" { uses="foo@bar" }`)
-	assertParseError(t, err, 1, 0, workflow, "the `uses' attribute must be a path, a docker image, or owner/repo@ref")
+	assertParseError(t, err, 1, 0, workflow,
+		"the `uses' attribute must be a path, a docker image, or owner/repo@ref",
+		"action `a' must have a `uses' attribute")
 	workflow, err = parseString(`action "a" { uses={a="b"} }`)
 	assertParseError(t, err, 1, 0, workflow,
 		"expected string, got object",
@@ -367,7 +373,11 @@ func TestUsesCustomActionsTransformed(t *testing.T) {
 	assertParseSuccess(t, err, 1, 0, workflow)
 	action := workflow.GetAction("a")
 	require.NotNil(t, action)
-	assert.Equal(t, "./foo", action.Uses.Path)
+	if p, ok := action.Uses.(*model.UsesPath); ok {
+		assert.Equal(t, "./foo", p.Path)
+		return
+	}
+	assert.Fail(t, "expected uses path type")
 }
 
 func TestUsesCustomActionsShortPath(t *testing.T) {
@@ -375,7 +385,11 @@ func TestUsesCustomActionsShortPath(t *testing.T) {
 	assertParseSuccess(t, err, 1, 0, workflow)
 	action := workflow.GetAction("a")
 	require.NotNil(t, action)
-	assert.Equal(t, "./", action.Uses.Path)
+	if p, ok := action.Uses.(*model.UsesPath); ok {
+		assert.Equal(t, "./", p.Path)
+		return
+	}
+	assert.Fail(t, "expected uses path type")
 }
 
 func TestTwoFlows(t *testing.T) {
