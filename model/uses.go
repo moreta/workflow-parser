@@ -6,7 +6,7 @@ import (
 
 type uses interface {
 	fmt.Stringer
-	Form() ActionUsesForm
+	isUses()
 }
 
 // UsesDockerRegistry represents `uses = "docker://image"`
@@ -26,9 +26,9 @@ type UsesPath struct {
 	Path string
 }
 
-func (u *UsesDockerImage) Form() ActionUsesForm { return DockerImageUsesForm }
-func (u *UsesRepository) Form() ActionUsesForm  { return CrossRepoUsesForm }
-func (u *UsesPath) Form() ActionUsesForm        { return InRepoUsesForm }
+func (u *UsesDockerImage) isUses() {}
+func (u *UsesRepository) isUses()  {}
+func (u *UsesPath) isUses()        {}
 
 func (u *UsesDockerImage) String() string {
 	return fmt.Sprintf("docker://%s", u.Image)

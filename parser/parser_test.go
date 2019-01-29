@@ -648,27 +648,27 @@ func TestUsesForm(t *testing.T) {
 	cases := []struct {
 		name         string
 		action       string
-		expectedForm model.ActionUsesForm
+		expectedType interface{}
 	}{
 		{
 			name:         "docker",
 			action:       `action "a" { uses = "docker://alpine" }`,
-			expectedForm: model.DockerImageUsesForm,
+			expectedType: &model.UsesDockerImage{},
 		},
 		{
 			name:         "in-repo",
 			action:       `action "a" { uses = "./actions/foo" }`,
-			expectedForm: model.InRepoUsesForm,
+			expectedType: &model.UsesPath{},
 		},
 		{
 			name:         "cross-repo",
 			action:       `action "a" { uses = "name/owner/path@5678ac" }`,
-			expectedForm: model.CrossRepoUsesForm,
+			expectedType: &model.UsesRepository{},
 		},
 		{
 			name:         "cross-repo-no-path",
 			action:       `action "a" { uses = "name/owner@5678ac" }`,
-			expectedForm: model.CrossRepoUsesForm,
+			expectedType: &model.UsesRepository{},
 		},
 	}
 
@@ -676,7 +676,7 @@ func TestUsesForm(t *testing.T) {
 		t.Run(tc.name, func(tt *testing.T) {
 			workflow, err := Parse(strings.NewReader(tc.action))
 			require.NoError(tt, err)
-			assert.Equalf(tt, tc.expectedForm, workflow.Actions[0].Uses.Form(), "%+v", workflow.Actions[0].Uses)
+			assert.IsType(tt, tc.expectedType, workflow.Actions[0].Uses)
 		})
 	}
 }
