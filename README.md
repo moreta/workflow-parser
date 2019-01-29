@@ -2,8 +2,12 @@
 
 This repository contains the official parser for GitHub Actions
 `main.workflow` files, along with unit tests and a command-line driver.
-There are also syntax-highlighting configuration files for Vim and Atom,
-under the `syntax/` directory.
+
+There are syntax-highlighting configuration files for Vim and Atom, under
+the `syntax/` directory.
+
+There is a language specification, by example and by BNF grammar, in
+[`language.md`](language.md).
 
 # Using the parser
 

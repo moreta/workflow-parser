@@ -5,49 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/hashicorp/hcl/hcl/ast"
 )
-
-// Configuration is a parsed main.workflow file, with some helpers that the deployer wants.
-type Configuration struct {
-	Actions   []*Action
-	Workflows []*Workflow
-	Errors    []*Error
-	Version   int
-
-	posMap map[interface{}]ast.Node
-}
-
-// Action represents a single "action" stanza in a .workflow file.
-type Action struct {
-	Identifier string
-	Uses       ActionUses
-	Runs, Args ActionCommand
-	Needs      []string
-	Env        map[string]string
-	Secrets    []string
-}
-
-// ActionCommand represents the optional "runs" and "args" attributes.
-// Each one takes one of two forms:
-//   - runs="entrypoint arg1 arg2 ..."
-//   - runs=[ "entrypoint", "arg1", "arg2", ... ]
-// If the user uses the string form, "Raw" contains that value, and
-// "Parsed" contains an array of the string value split at whitespace.
-// If the user uses the array form, "Raw" is empty, and "Parsed" contains
-// the array.
-type ActionCommand struct {
-	Raw    string
-	Parsed []string
-}
-
-// Workflow represents a single "workflow" stanza in a .workflow file.
-type Workflow struct {
-	Identifier string
-	On         string
-	Resolves   []string
-}
 
 // Error represents an error identified by the parser, either syntactic
 // (HCL) or semantic (.workflow) in nature.  There are fields for location
@@ -127,50 +85,14 @@ const (
 // workflow file.  See the comments for WARNING, ERROR, and FATAL, above.
 type Severity int
 
-// GetAction looks up action by identifier.
-//
-// If the action is not found, nil is returned.
-func (c *Configuration) GetAction(id string) *Action {
-	for _, action := range c.Actions {
-		if action.Identifier == id {
-			return action
-		}
-	}
-	return nil
-}
-
-// GetWorkflow looks up a workflow by identifier.
-//
-// If the workflow is not found, nil is returned.
-func (c *Configuration) GetWorkflow(id string) *Workflow {
-	for _, workflow := range c.Workflows {
-		if workflow.Identifier == id {
-			return workflow
-		}
-	}
-	return nil
-}
-
-// GetWorkflows gets all Workflow structures that match a given type of event.
-// e.g., GetWorkflows("push")
-func (c *Configuration) GetWorkflows(eventType string) []*Workflow {
-	var ret []*Workflow
-	for _, workflow := range c.Workflows {
-		if IsMatchingEventType(workflow.On, eventType) {
-			ret = append(ret, workflow)
-		}
-	}
-	return ret
-}
-
 // FirstError searches a Configuration for the first error at or above a
 // given severity level.  Checking the return value against nil is a good
 // way to see if the file has any errors at or above the given severity.
 // A caller intending to execute the file might check for
-// `c.FirstError(parser.WARNING)`, while a caller intending to display
-// the file might check for `c.FirstError(parser.FATAL)`.
-func (c *Configuration) FirstError(severity Severity) error {
-	for _, e := range c.Errors {
+// `errors.FirstError(parser.WARNING)`, while a caller intending to
+// display the file might check for `errors.FirstError(parser.FATAL)`.
+func (errors ErrorList) FirstError(severity Severity) error {
+	for _, e := range errors {
 		if e.Severity >= severity {
 			return e
 		}
@@ -178,15 +100,15 @@ func (c *Configuration) FirstError(severity Severity) error {
 	return nil
 }
 
-type byLineNumber []*Error
+type ErrorList []*Error
 
-func (a byLineNumber) Len() int           { return len(a) }
-func (a byLineNumber) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byLineNumber) Less(i, j int) bool { return a[i].Pos.Line < a[j].Pos.Line }
+func (a ErrorList) Len() int           { return len(a) }
+func (a ErrorList) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ErrorList) Less(i, j int) bool { return a[i].Pos.Line < a[j].Pos.Line }
 
-// SortErrors sorts the errors reported by the parser.  Do this after
+// sortErrors sorts the errors reported by the parser.  Do this after
 // parsing is complete.  The sort is stable, so order is preserved within
 // a single line: left to right, syntax errors before validation errors.
-func (c *Configuration) SortErrors() {
-	sort.Stable(byLineNumber(c.Errors))
+func (errors ErrorList) sort() {
+	sort.Stable(errors)
 }
