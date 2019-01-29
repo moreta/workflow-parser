@@ -1,5 +1,9 @@
 package model
 
+import (
+	"fmt"
+)
+
 // ActionUses represents the mandatory "uses" block in an action.
 // It takes one of three forms:
 //   - "./path"
@@ -18,6 +22,7 @@ type Uses struct {
 }
 
 type actionUses interface {
+	fmt.Stringer
 	Form() string
 }
 
@@ -41,6 +46,22 @@ type UsesPath struct {
 func (u *UsesDockerImage) Form() string { return string(DockerImageUsesForm) }
 func (u *UsesRepository) Form() string  { return string(CrossRepoUsesForm) }
 func (u *UsesPath) Form() string        { return string(InRepoUsesForm) }
+
+func (u *UsesDockerImage) String() string {
+	return fmt.Sprintf("docker://%s", u.Image)
+}
+
+func (u *UsesRepository) String() string {
+	if u.Path == "" {
+		return fmt.Sprintf("%s@%s", u.Repository, u.Ref)
+	}
+
+	return fmt.Sprintf("%s/%s@%s", u.Repository, u.Path, u.Ref)
+}
+
+func (u *UsesPath) String() string {
+	return "." + u.Path
+}
 
 // ActionUsesForm is which of the "uses" forms specified by an action.
 type ActionUsesForm string
