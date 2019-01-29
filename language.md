@@ -193,11 +193,15 @@ QUOTED_IDENTIFIER : '"' IDENTIFIER '"';
 IDENTIFIER : [a-zA-Z] [a-zA-Z0-9_]*;
 
 STRING
-   : '"' ( ESC | ~ ["\\] )* '"'
+   : '"' ( ESC | SAFECODEPOINT )* '"'
    ;
 
 fragment ESC
    : '\\' ( ["\\/bfnrt] )
+   ;
+
+fragment SAFECODEPOINT
+   : ~ ["\\\u0000-\u001F\u007F]
    ;
 
 LINE_COMMENT
