@@ -13,12 +13,28 @@ func TestUsesStringer(t *testing.T) {
 		expected string
 	}{
 		{
+			uses:     &UsesDockerImage{Image: "alpine"},
+			expected: "docker://alpine",
+		},
+		{
 			uses:     &UsesRepository{Repository: "actions/workflow-parser", Path: "/", Ref: "master"},
 			expected: "actions/workflow-parser@master",
 		},
 		{
 			uses:     &UsesRepository{Repository: "actions/workflow-parser", Path: "/path", Ref: "master"},
 			expected: "actions/workflow-parser/path@master",
+		},
+		{
+			uses:     &UsesPath{Path: "path"},
+			expected: "./path",
+		},
+		{
+			uses:     &UsesInvalid{},
+			expected: "",
+		},
+		{
+			uses:     &UsesInvalid{Raw: "foo"},
+			expected: "foo",
 		},
 	}
 
