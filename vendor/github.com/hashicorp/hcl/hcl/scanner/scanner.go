@@ -475,34 +475,26 @@ func (s *Scanner) scanHeredoc() {
 
 // scanString scans a quoted string
 func (s *Scanner) scanString() {
-	braces := 0
 	for {
 		// '"' opening already consumed
 		// read character after quote
 		ch := s.next()
 
-		if (ch == '\n' && braces == 0) || ch < 0 || ch == eof {
+		if ch == '\n' || ch < 0 || ch == eof {
 			s.err("literal not terminated")
 			return
 		}
 
-		if ch == '"' && braces == 0 {
+		if ch == '"' {
 			break
-		}
-
-		// If we're going into a ${} then we can ignore quotes for awhile
-		if braces == 0 && ch == '$' && s.peek() == '{' {
-			braces++
-			s.next()
-		} else if braces > 0 && ch == '{' {
-			braces++
-		}
-		if braces > 0 && ch == '}' {
-			braces--
 		}
 
 		if ch == '\\' {
 			s.scanEscape()
+		}
+
+		if ch < ' ' {
+			s.err(fmt.Sprintf("control character in string: '\\u%04x'", ch))
 		}
 	}
 
