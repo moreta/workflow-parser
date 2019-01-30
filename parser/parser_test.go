@@ -218,18 +218,18 @@ func TestUses(t *testing.T) {
 }
 
 func TestUsesFailures(t *testing.T) {
-	workflow, err := parseString(`action "a" { uses="foo" }`)
+	workflow, err := parseString(`action "a" { uses="" }`)
 	assertParseError(t, err, 1, 0, workflow,
-		"the `uses' attribute must be a path, a docker image, or owner/repo@ref",
-		"action `a' must have a `uses' attribute")
+		"`uses' value in action `a' cannot be blank")
+	workflow, err = parseString(`action "a" { uses="foo" }`)
+	assertParseError(t, err, 1, 0, workflow,
+		"the `uses' attribute must be a path, a docker image, or owner/repo@ref")
 	workflow, err = parseString(`action "a" { uses="foo/bar" }`)
 	assertParseError(t, err, 1, 0, workflow,
-		"the `uses' attribute must be a path, a docker image, or owner/repo@ref",
-		"action `a' must have a `uses' attribute")
+		"the `uses' attribute must be a path, a docker image, or owner/repo@ref")
 	workflow, err = parseString(`action "a" { uses="foo@bar" }`)
 	assertParseError(t, err, 1, 0, workflow,
-		"the `uses' attribute must be a path, a docker image, or owner/repo@ref",
-		"action `a' must have a `uses' attribute")
+		"the `uses' attribute must be a path, a docker image, or owner/repo@ref")
 	workflow, err = parseString(`action "a" { uses={a="b"} }`)
 	assertParseError(t, err, 1, 0, workflow,
 		"expected string, got object",
@@ -511,8 +511,7 @@ func TestUsesMissingCheck(t *testing.T) {
 func TestUsesAttributeBlankCheck(t *testing.T) {
 	workflow, err := parseString(`action "a" { uses="" }`)
 	assertParseError(t, err, 1, 0, workflow,
-		"`uses' value in action `a' cannot be blank",
-		"action `a' must have a `uses' attribute")
+		"`uses' value in action `a' cannot be blank")
 }
 
 func TestUsesDuplicatesCheck(t *testing.T) {
@@ -646,38 +645,43 @@ func TestReservedVariables(t *testing.T) {
 
 func TestUsesForm(t *testing.T) {
 	cases := []struct {
-		name         string
 		action       string
 		expectedType interface{}
 	}{
 		{
-			name:         "docker",
 			action:       `action "a" { uses = "docker://alpine" }`,
 			expectedType: &model.UsesDockerImage{},
 		},
 		{
-			name:         "in-repo",
 			action:       `action "a" { uses = "./actions/foo" }`,
 			expectedType: &model.UsesPath{},
 		},
 		{
-			name:         "cross-repo",
 			action:       `action "a" { uses = "name/owner/path@5678ac" }`,
 			expectedType: &model.UsesRepository{},
 		},
 		{
-			name:         "cross-repo-no-path",
 			action:       `action "a" { uses = "name/owner@5678ac" }`,
 			expectedType: &model.UsesRepository{},
+		},
+		{
+			action:       `action "a" { uses = "" }`,
+			expectedType: &model.UsesInvalid{},
+		},
+		{
+			action:       `action "a" { uses = "foo@" }`,
+			expectedType: &model.UsesInvalid{},
+		},
+		{
+			action:       `action "a" { uses = "foo" }`,
+			expectedType: &model.UsesInvalid{},
 		},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.name, func(tt *testing.T) {
-			workflow, err := Parse(strings.NewReader(tc.action))
-			require.NoError(tt, err)
-			assert.IsType(tt, tc.expectedType, workflow.Actions[0].Uses)
-		})
+		workflow, err := Parse(strings.NewReader(tc.action), WithSuppressErrors())
+		require.NoError(t, err)
+		assert.IsType(t, tc.expectedType, workflow.Actions[0].Uses)
 	}
 }
 

@@ -26,9 +26,15 @@ type UsesPath struct {
 	Path string
 }
 
+// UsesInvalid represents any present but invalid uses value
+type UsesInvalid struct {
+	Raw string
+}
+
 func (u *UsesDockerImage) isUses() {}
 func (u *UsesRepository) isUses()  {}
 func (u *UsesPath) isUses()        {}
+func (u *UsesInvalid) isUses()     {}
 
 func (u *UsesDockerImage) String() string {
 	return fmt.Sprintf("docker://%s", u.Image)
@@ -44,4 +50,8 @@ func (u *UsesRepository) String() string {
 
 func (u *UsesPath) String() string {
 	return u.Path
+}
+
+func (u *UsesInvalid) String() string {
+	return u.Raw
 }

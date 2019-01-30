@@ -588,6 +588,7 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 	}
 
 	if strVal == "" {
+		action.Uses = &model.UsesInvalid{}
 		ps.addError(node, "`uses' value in action `%s' cannot be blank", action.Identifier)
 		return
 	}
@@ -603,12 +604,14 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 
 	tok := strings.Split(strVal, "@")
 	if len(tok) != 2 {
+		action.Uses = &model.UsesInvalid{Raw: strVal}
 		ps.addError(node, "The `uses' attribute must be a path, a Docker image, or owner/repo@ref")
 		return
 	}
 	ref := tok[1]
 	tok = strings.SplitN(tok[0], "/", 3)
 	if len(tok) < 2 {
+		action.Uses = &model.UsesInvalid{Raw: strVal}
 		ps.addError(node, "The `uses' attribute must be a path, a Docker image, or owner/repo@ref")
 		return
 	}
