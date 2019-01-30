@@ -9,12 +9,12 @@ type uses interface {
 	isUses()
 }
 
-// UsesDockerImage represents `uses = "docker://image"`
+// UsesDockerImage represents `uses = "docker://<image>"`
 type UsesDockerImage struct {
 	Image string
 }
 
-// UsesRepository represents `uses = "<owner>/<repository>[/path]@<ref>"`
+// UsesRepository represents `uses = "<owner>/<repo>[/<path>]@<ref>"`
 type UsesRepository struct {
 	Repository string
 	Path       string
@@ -26,7 +26,7 @@ type UsesPath struct {
 	Path string
 }
 
-// UsesInvalid represents any present but invalid uses value
+// UsesInvalid represents any invalid `uses = "<raw>"` value
 type UsesInvalid struct {
 	Raw string
 }
