@@ -615,10 +615,10 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 		ps.addError(node, "The `uses' attribute must be a path, a Docker image, or owner/repo@ref")
 		return
 	}
-	usesRepo := &model.UsesRepository{Repository: tok[0] + "/" + tok[1], Ref: ref, Path: "/"}
+	usesRepo := &model.UsesRepository{Repository: tok[0] + "/" + tok[1], Ref: ref}
 	action.Uses = usesRepo
 	if len(tok) == 3 {
-		usesRepo.Path = "/" + tok[2]
+		usesRepo.Path = tok[2]
 	}
 }
 

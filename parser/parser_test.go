@@ -201,11 +201,11 @@ func TestUses(t *testing.T) {
 	assertParseSuccess(t, err, 4, 0, workflow)
 	a := workflow.GetAction("a")
 	if assert.NotNil(t, a) {
-		assert.Equal(t, &model.UsesRepository{Repository: "foo/bar", Path: "/", Ref: "dev"}, a.Uses)
+		assert.Equal(t, &model.UsesRepository{Repository: "foo/bar", Ref: "dev"}, a.Uses)
 	}
 	b := workflow.GetAction("b")
 	if assert.NotNil(t, b) {
-		assert.Equal(t, &model.UsesRepository{Repository: "foo/bar", Path: "/path", Ref: "1.0.0"}, b.Uses)
+		assert.Equal(t, &model.UsesRepository{Repository: "foo/bar", Path: "path", Ref: "1.0.0"}, b.Uses)
 	}
 	c := workflow.GetAction("c")
 	if assert.NotNil(t, c) {
