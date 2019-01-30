@@ -637,43 +637,43 @@ func TestReservedVariables(t *testing.T) {
 
 func TestUsesForm(t *testing.T) {
 	cases := []struct {
-		action       string
-		expectedType interface{}
+		action   string
+		expected model.Uses
 	}{
 		{
-			action:       `action "a" { uses = "docker://alpine" }`,
-			expectedType: &model.UsesDockerImage{},
+			action:   `action "a" { uses = "docker://alpine" }`,
+			expected: &model.UsesDockerImage{},
 		},
 		{
-			action:       `action "a" { uses = "./actions/foo" }`,
-			expectedType: &model.UsesPath{},
+			action:   `action "a" { uses = "./actions/foo" }`,
+			expected: &model.UsesPath{},
 		},
 		{
-			action:       `action "a" { uses = "name/owner/path@5678ac" }`,
-			expectedType: &model.UsesRepository{},
+			action:   `action "a" { uses = "name/owner/path@5678ac" }`,
+			expected: &model.UsesRepository{},
 		},
 		{
-			action:       `action "a" { uses = "name/owner@5678ac" }`,
-			expectedType: &model.UsesRepository{},
+			action:   `action "a" { uses = "name/owner@5678ac" }`,
+			expected: &model.UsesRepository{},
 		},
 		{
-			action:       `action "a" { uses = "" }`,
-			expectedType: &model.UsesInvalid{},
+			action:   `action "a" { uses = "" }`,
+			expected: &model.UsesInvalid{},
 		},
 		{
-			action:       `action "a" { uses = "foo@" }`,
-			expectedType: &model.UsesInvalid{},
+			action:   `action "a" { uses = "foo@" }`,
+			expected: &model.UsesInvalid{},
 		},
 		{
-			action:       `action "a" { uses = "foo" }`,
-			expectedType: &model.UsesInvalid{},
+			action:   `action "a" { uses = "foo" }`,
+			expected: &model.UsesInvalid{},
 		},
 	}
 
 	for _, tc := range cases {
 		workflow, err := Parse(strings.NewReader(tc.action), WithSuppressErrors())
 		require.NoError(t, err)
-		assert.IsType(t, tc.expectedType, workflow.Actions[0].Uses)
+		assert.IsType(t, tc.expected, workflow.Actions[0].Uses)
 	}
 }
 

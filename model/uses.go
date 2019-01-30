@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type uses interface {
+type Uses interface {
 	fmt.Stringer
 	isUses()
 }
