@@ -53,7 +53,7 @@ func TestActionsAndAttributes(t *testing.T) {
 	actionA := workflow.Actions[0]
 	assert.Equal(t, "a", actionA.Identifier)
 	assert.Equal(t, 0, len(actionA.Needs))
-	assert.Equal(t, &model.UsesPath{Path: "./x"}, actionA.Uses)
+	assert.Equal(t, &model.UsesPath{Path: "x"}, actionA.Uses)
 	assert.Equal(t, "cmd", actionA.Runs.Raw)
 	assert.Equal(t, []string{"cmd"}, actionA.Runs.Parsed)
 	assert.Equal(t, "", actionA.Args.Raw)
@@ -61,7 +61,7 @@ func TestActionsAndAttributes(t *testing.T) {
 
 	actionB := workflow.Actions[1]
 	assert.Equal(t, "b", actionB.Identifier)
-	assert.Equal(t, &model.UsesPath{Path: "./y"}, actionB.Uses)
+	assert.Equal(t, &model.UsesPath{Path: "y"}, actionB.Uses)
 	assert.Equal(t, []string{"a"}, actionB.Needs)
 	assert.Equal(t, "", actionB.Runs.Raw)
 	assert.Equal(t, "", actionB.Args.Raw)
@@ -209,7 +209,7 @@ func TestUses(t *testing.T) {
 	}
 	c := workflow.GetAction("c")
 	if assert.NotNil(t, c) {
-		assert.Equal(t, &model.UsesPath{Path: "./xyz"}, c.Uses)
+		assert.Equal(t, &model.UsesPath{Path: "xyz"}, c.Uses)
 	}
 	d := workflow.GetAction("d")
 	if assert.NotNil(t, d) {
@@ -374,7 +374,7 @@ func TestUsesCustomActionsTransformed(t *testing.T) {
 	action := workflow.GetAction("a")
 	require.NotNil(t, action)
 	if p, ok := action.Uses.(*model.UsesPath); ok {
-		assert.Equal(t, "./foo", p.Path)
+		assert.Equal(t, "foo", p.Path)
 		return
 	}
 	assert.Fail(t, "expected uses path type")
@@ -386,7 +386,7 @@ func TestUsesCustomActionsShortPath(t *testing.T) {
 	action := workflow.GetAction("a")
 	require.NotNil(t, action)
 	if p, ok := action.Uses.(*model.UsesPath); ok {
-		assert.Equal(t, "./", p.Path)
+		assert.Equal(t, "", p.Path)
 		return
 	}
 	assert.Fail(t, "expected uses path type")

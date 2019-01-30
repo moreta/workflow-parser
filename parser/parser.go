@@ -593,7 +593,7 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 		return
 	}
 	if strings.HasPrefix(strVal, "./") {
-		action.Uses = &model.UsesPath{Path: strVal}
+		action.Uses = &model.UsesPath{Path: strings.TrimPrefix(strVal, "./")}
 		return
 	}
 

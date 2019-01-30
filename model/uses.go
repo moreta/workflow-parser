@@ -49,7 +49,7 @@ func (u *UsesRepository) String() string {
 }
 
 func (u *UsesPath) String() string {
-	return u.Path
+	return fmt.Sprintf("./%s", u.Path)
 }
 
 func (u *UsesInvalid) String() string {
