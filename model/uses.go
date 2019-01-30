@@ -41,11 +41,11 @@ func (u *UsesDockerImage) String() string {
 }
 
 func (u *UsesRepository) String() string {
-	if u.Path == "" {
+	if u.Path == "/" {
 		return fmt.Sprintf("%s@%s", u.Repository, u.Ref)
 	}
 
-	return fmt.Sprintf("%s/%s@%s", u.Repository, u.Path, u.Ref)
+	return fmt.Sprintf("%s%s@%s", u.Repository, u.Path, u.Ref)
 }
 
 func (u *UsesPath) String() string {
