@@ -373,11 +373,7 @@ func TestUsesCustomActionsTransformed(t *testing.T) {
 	assertParseSuccess(t, err, 1, 0, workflow)
 	action := workflow.GetAction("a")
 	require.NotNil(t, action)
-	if p, ok := action.Uses.(*model.UsesPath); ok {
-		assert.Equal(t, "foo", p.Path)
-		return
-	}
-	assert.Fail(t, "expected uses path type")
+	require.Equal(t, &model.UsesPath{Path: "foo"}, action.Uses)
 }
 
 func TestUsesCustomActionsShortPath(t *testing.T) {
@@ -385,11 +381,7 @@ func TestUsesCustomActionsShortPath(t *testing.T) {
 	assertParseSuccess(t, err, 1, 0, workflow)
 	action := workflow.GetAction("a")
 	require.NotNil(t, action)
-	if p, ok := action.Uses.(*model.UsesPath); ok {
-		assert.Equal(t, "", p.Path)
-		return
-	}
-	assert.Fail(t, "expected uses path type")
+	require.Equal(t, &model.UsesPath{}, action.Uses)
 }
 
 func TestTwoFlows(t *testing.T) {
