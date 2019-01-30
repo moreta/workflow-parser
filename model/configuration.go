@@ -9,7 +9,7 @@ type Configuration struct {
 // Action represents a single "action" stanza in a .workflow file.
 type Action struct {
 	Identifier string
-	Uses       ActionUses
+	Uses       Uses
 	Runs, Args ActionCommand
 	Needs      []string
 	Env        map[string]string
