@@ -50,7 +50,11 @@ function lex(str) {
 		// Strings, with escape characters
 		else if (str.charAt(0) == '"') {
 			var val = ""
-			for (var i=1; i<str.length; i++) {
+			for (var i=1; i<=str.length; i++) {
+				if (i >= str.length) {
+					ret.push(["ERROR", "unterminated string literal", linenum])
+					return ret
+				}
 				if (str.charAt(i) == '"') {
 					str = str.substring(i+1, str.length)
 					break;
