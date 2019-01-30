@@ -50,6 +50,7 @@ function lex(str) {
 		// Strings, with escape characters
 		else if (str.charAt(0) == '"') {
 			var val = ""
+			var warnedAboutIllegalChar = false
 			for (var i=1; i<=str.length; i++) {
 				if (i >= str.length) {
 					ret.push(["ERROR", "unterminated string literal", linenum])
@@ -57,7 +58,7 @@ function lex(str) {
 				}
 				if (str.charAt(i) == '"') {
 					str = str.substring(i+1, str.length)
-					break;
+					break
 				}
 				if (str.charAt(i) == '\\') {
 					switch (str.charAt(++i)) {
@@ -72,7 +73,15 @@ function lex(str) {
 							ret.push(["ERROR", "illegal escape sequence: \"" + str.charAt(i) + "\"", linenum])
 					}
 				}
-				else val += str.charAt(i)
+				else if (str.charCodeAt(i) < 32) {
+					if (!warnedAboutIllegalChar) {
+						ret.push(["ERROR", "control character in string: '\\u00" + str.charCodeAt(i).toString(16).padStart(2, '0') + "'", linenum])
+						warnedAboutIllegalChar = true
+					}
+				}
+				else {
+					val += str.charAt(i)
+				}
 			}
 			ret.push(["STRING", val, linenum])
 		}
