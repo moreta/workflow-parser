@@ -43,7 +43,7 @@ func Parse(reader io.Reader, options ...OptionFunc) (*model.Configuration, error
 			pos := ErrorPos{File: pe.Pos.Filename, Line: pe.Pos.Line, Column: pe.Pos.Column}
 			errors := ErrorList{newFatal(pos, pe.Err.Error())}
 			return nil, &ParserError{
-				message: pe.Err.Error(),
+				message: "unable to parse",
 				Errors:  errors,
 			}
 		}
