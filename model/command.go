@@ -8,19 +8,21 @@ import (
 // Each one takes one of two forms:
 //   - runs="entrypoint arg1 arg2 ..."
 //   - runs=[ "entrypoint", "arg1", "arg2", ... ]
-// If the user uses the string form, the StringCommand type should be used.
-// If the user uses the list form, the ListCommand type should be used.
-// Both types have methods to either split or join depending on the use.
 type Command interface {
 	isCommand()
 	Split() []string
 	Join() string
 }
 
+// StringCommand represents the string based form of the "runs" or "args"
+// attribute.
+//   - runs="entrypoint arg1 arg2 ..."
 type StringCommand struct {
 	Value string
 }
 
+// ListCommand represents the list based form of the "runs" or "args" attribute.
+//   - runs=[ "entrypoint", "arg1", "arg2", ... ]
 type ListCommand struct {
 	Values []string
 }
