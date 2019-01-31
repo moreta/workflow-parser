@@ -554,9 +554,13 @@ func (ps *parseState) parseActionAttribute(name string, action *model.Action, va
 			ps.posMap[&action.Needs] = val
 		}
 	case "runs":
-		action.Runs = ps.parseCommand(action, action.Runs, name, val, false)
+		if runs := ps.parseCommand(action, action.Runs, name, val, false); runs != nil {
+			action.Runs = runs
+		}
 	case "args":
-		action.Args = ps.parseCommand(action, action.Args, name, val, true)
+		if args := ps.parseCommand(action, action.Args, name, val, true); args != nil {
+			action.Args = args
+		}
 	case "env":
 		env := ps.literalToStringMap(val)
 		if env != nil {

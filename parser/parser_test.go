@@ -504,8 +504,22 @@ func TestUsesDuplicatesCheck(t *testing.T) {
 func TestCommandDuplicatesCheck(t *testing.T) {
 	workflow, err := parseString(`action "a" { uses="./x" runs="x" runs="y" }`)
 	assertParseError(t, err, 1, 0, workflow, "`runs' redefined in action `a'")
+	if pe, ok := err.(*ParserError); ok {
+		require.Equal(t, &model.StringCommand{Value: "y"}, pe.Actions[0].Runs)
+	}
 	workflow, err = parseString(`action "a" { uses="./x" args="x" args="y" }`)
 	assertParseError(t, err, 1, 0, workflow, "`args' redefined in action `a'")
+	if pe, ok := err.(*ParserError); ok {
+		require.Equal(t, &model.StringCommand{Value: "y"}, pe.Actions[0].Args)
+	}
+	workflow, err = parseString(`action "a" { uses="./x" runs="x" runs=17 }`)
+	assertParseError(t, err, 1, 0, workflow,
+		"`runs' redefined in action `a'",
+		"expected string, got number",
+		"the `runs' attribute must be a string or a list")
+	if pe, ok := err.(*ParserError); ok {
+		require.Equal(t, &model.StringCommand{Value: "x"}, pe.Actions[0].Runs)
+	}
 }
 
 func TestFlowKeywordsRedefined(t *testing.T) {
