@@ -554,9 +554,9 @@ func (ps *parseState) parseActionAttribute(name string, action *model.Action, va
 			ps.posMap[&action.Needs] = val
 		}
 	case "runs":
-		ps.parseCommand(action, &action.Runs, name, val, false)
+		action.Runs = ps.parseCommand(action, action.Runs, name, val, false)
 	case "args":
-		ps.parseCommand(action, &action.Args, name, val, true)
+		action.Args = ps.parseCommand(action, action.Args, name, val, true)
 	case "env":
 		env := ps.literalToStringMap(val)
 		if env != nil {
@@ -621,11 +621,11 @@ func (ps *parseState) parseUses(action *model.Action, node ast.Node) {
 	}
 }
 
-// parseUses sets the action.Runs or action.Command value based on the
+// parseUses sets the action.Runs or action.Args value based on the
 // contents of the AST node.  This function enforces formatting
 // requirements on the value.
-func (ps *parseState) parseCommand(action *model.Action, dest *model.ActionCommand, name string, node ast.Node, allowBlank bool) {
-	if len(dest.Parsed) > 0 {
+func (ps *parseState) parseCommand(action *model.Action, cmd model.Command, name string, node ast.Node, allowBlank bool) model.Command {
+	if cmd != nil {
 		ps.addWarning(node, "`%s' redefined in action `%s'", name, action.Identifier)
 		// continue, allowing the redefinition
 	}
@@ -633,9 +633,9 @@ func (ps *parseState) parseCommand(action *model.Action, dest *model.ActionComma
 	// Is it a list?
 	if _, ok := node.(*ast.ListType); ok {
 		if parsed, ok := ps.literalToStringArray(node, false); ok {
-			dest.Parsed = parsed
+			return &model.ListCommand{Values: parsed}
 		}
-		return
+		return nil
 	}
 
 	// If not, parse a whitespace-separated string into a list.
@@ -643,14 +643,13 @@ func (ps *parseState) parseCommand(action *model.Action, dest *model.ActionComma
 	var ok bool
 	if raw, ok = ps.literalToString(node); !ok {
 		ps.addError(node, "The `%s' attribute must be a string or a list", name)
-		return
+		return nil
 	}
 	if raw == "" && !allowBlank {
 		ps.addError(node, "`%s' value in action `%s' cannot be blank", name, action.Identifier)
-		return
+		return nil
 	}
-	dest.Raw = raw
-	dest.Parsed = strings.Fields(raw)
+	return &model.StringCommand{Value: raw}
 }
 
 func typename(val interface{}) string {
