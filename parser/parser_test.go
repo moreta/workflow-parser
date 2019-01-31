@@ -53,18 +53,14 @@ func TestActionsAndAttributes(t *testing.T) {
 	assert.Equal(t, "a", actionA.Identifier)
 	assert.Equal(t, 0, len(actionA.Needs))
 	assert.Equal(t, &model.UsesPath{Path: "x"}, actionA.Uses)
-	assert.Equal(t, "cmd", actionA.Runs.Raw)
-	assert.Equal(t, []string{"cmd"}, actionA.Runs.Parsed)
-	assert.Equal(t, "", actionA.Args.Raw)
+	assert.Equal(t, &model.StringCommand{Value: "cmd"}, actionA.Runs)
 	assert.Equal(t, map[string]string{"PATH": "less traveled by", "HOME": "where the heart is"}, actionA.Env)
 
 	actionB := workflow.Actions[1]
 	assert.Equal(t, "b", actionB.Identifier)
 	assert.Equal(t, &model.UsesPath{Path: "y"}, actionB.Uses)
 	assert.Equal(t, []string{"a"}, actionB.Needs)
-	assert.Equal(t, "", actionB.Runs.Raw)
-	assert.Equal(t, "", actionB.Args.Raw)
-	assert.Equal(t, []string{"foo", "bar"}, actionB.Args.Parsed)
+	assert.Equal(t, &model.ListCommand{Values: []string{"foo", "bar"}}, actionB.Args)
 	assert.Equal(t, []string{"THE", "CURRENCY", "OF", "INTIMACY"}, actionB.Secrets)
 }
 
@@ -241,34 +237,34 @@ func TestUsesFailures(t *testing.T) {
 
 func TestGetCommand(t *testing.T) {
 	workflow, err := parseString(`
-		action "a" { uses="./x" runs="a b c" }
-		action "b" { uses="./x" runs=["a", "b", "c"] }
-		action "c" { uses="./x" args="a b c" }
-		action "d" { uses="./x" args=["a", "b", "c"] }
-		action "e" { uses="./x" runs="a b c" args="x y z" }
-		action "f" { uses="./x" runs=["a", "b", "c"] args=["x", "y", "z"] }
+		action "a" { uses="./x" runs="a b c d" }
+		action "b" { uses="./x" runs=["a", "b c", "d"] }
+		action "c" { uses="./x" args="a b c d" }
+		action "d" { uses="./x" args=["a", "b c", "d"] }
+		action "e" { uses="./x" runs="a b c d" args="w x y z" }
+		action "f" { uses="./x" runs=["a", "b c", "d"] args=["w", "x y", "z"] }
 	`)
 	assertParseSuccess(t, err, 6, 0, workflow)
 	a := workflow.GetAction("a")
 	assert.NotNil(t, a)
-	assert.Equal(t, model.ActionCommand{Parsed: []string{"a", "b", "c"}, Raw: "a b c"}, a.Runs)
+	assert.Equal(t, &model.StringCommand{Value: "a b c d"}, a.Runs)
 	b := workflow.GetAction("b")
 	assert.NotNil(t, b)
-	assert.Equal(t, model.ActionCommand{Parsed: []string{"a", "b", "c"}}, b.Runs)
+	assert.Equal(t, &model.ListCommand{Values: []string{"a", "b c", "d"}}, b.Runs)
 	c := workflow.GetAction("c")
 	assert.NotNil(t, c)
-	assert.Equal(t, model.ActionCommand{Parsed: []string{"a", "b", "c"}, Raw: "a b c"}, c.Args)
+	assert.Equal(t, &model.StringCommand{Value: "a b c d"}, c.Args)
 	d := workflow.GetAction("d")
 	assert.NotNil(t, d)
-	assert.Equal(t, model.ActionCommand{Parsed: []string{"a", "b", "c"}}, d.Args)
+	assert.Equal(t, &model.ListCommand{Values: []string{"a", "b c", "d"}}, d.Args)
 	e := workflow.GetAction("e")
 	assert.NotNil(t, e)
-	assert.Equal(t, model.ActionCommand{Parsed: []string{"a", "b", "c"}, Raw: "a b c"}, e.Runs)
-	assert.Equal(t, model.ActionCommand{Parsed: []string{"x", "y", "z"}, Raw: "x y z"}, e.Args)
+	assert.Equal(t, &model.StringCommand{Value: "a b c d"}, e.Runs)
+	assert.Equal(t, &model.StringCommand{Value: "w x y z"}, e.Args)
 	f := workflow.GetAction("f")
 	assert.NotNil(t, f)
-	assert.Equal(t, model.ActionCommand{Parsed: []string{"a", "b", "c"}}, f.Runs)
-	assert.Equal(t, model.ActionCommand{Parsed: []string{"x", "y", "z"}}, f.Args)
+	assert.Equal(t, &model.ListCommand{Values: []string{"a", "b c", "d"}}, f.Runs)
+	assert.Equal(t, &model.ListCommand{Values: []string{"w", "x y", "z"}}, f.Args)
 }
 
 func TestGetCommandFailure(t *testing.T) {
@@ -508,8 +504,22 @@ func TestUsesDuplicatesCheck(t *testing.T) {
 func TestCommandDuplicatesCheck(t *testing.T) {
 	workflow, err := parseString(`action "a" { uses="./x" runs="x" runs="y" }`)
 	assertParseError(t, err, 1, 0, workflow, "`runs' redefined in action `a'")
+	if pe, ok := err.(*ParserError); ok {
+		require.Equal(t, &model.StringCommand{Value: "y"}, pe.Actions[0].Runs)
+	}
 	workflow, err = parseString(`action "a" { uses="./x" args="x" args="y" }`)
 	assertParseError(t, err, 1, 0, workflow, "`args' redefined in action `a'")
+	if pe, ok := err.(*ParserError); ok {
+		require.Equal(t, &model.StringCommand{Value: "y"}, pe.Actions[0].Args)
+	}
+	workflow, err = parseString(`action "a" { uses="./x" runs="x" runs=17 }`)
+	assertParseError(t, err, 1, 0, workflow,
+		"`runs' redefined in action `a'",
+		"expected string, got number",
+		"the `runs' attribute must be a string or a list")
+	if pe, ok := err.(*ParserError); ok {
+		require.Equal(t, &model.StringCommand{Value: "x"}, pe.Actions[0].Runs)
+	}
 }
 
 func TestFlowKeywordsRedefined(t *testing.T) {
