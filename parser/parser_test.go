@@ -671,6 +671,29 @@ func TestUsesForm(t *testing.T) {
 	}
 }
 
+func TestMultilineErrors(t *testing.T) {
+	_, err := parseString(`
+		workflow "a" {
+			on = 17        # three errors
+			resolves = "b"
+		}
+		action "b" {
+			uses="c"       # one error
+		}
+	`)
+	require.Error(t, err)
+	expect := "unable to parse and validate\n" +
+		"  Line 2: Workflow `a' must have an `on' attribute\n" +
+		"  Line 3: Expected string, got number\n" +
+		"  Line 3: Invalid format for `on' in workflow `a', expected string\n" +
+		"  Line 7: The `uses' attribute must be a path, a Docker image, or owner/repo@ref"
+	assert.Equal(t, expect, err.Error())
+
+	require.IsType(t, &ParserError{}, err)
+	pe := err.(*ParserError)
+	assert.Len(t, pe.Errors, 4)
+}
+
 /********** helpers **********/
 
 func assertParseSuccess(t *testing.T, err error, nactions int, nflows int, workflow *model.Configuration) {
