@@ -11,7 +11,6 @@ import (
 type Command interface {
 	isCommand()
 	Split() []string
-	Join() string
 }
 
 // StringCommand represents the string based form of the "runs" or "args"
@@ -36,12 +35,4 @@ func (s *StringCommand) Split() []string {
 
 func (l *ListCommand) Split() []string {
 	return l.Values
-}
-
-func (s *StringCommand) Join() string {
-	return s.Value
-}
-
-func (l *ListCommand) Join() string {
-	return strings.Join(l.Values, " ")
 }
