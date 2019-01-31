@@ -237,34 +237,34 @@ func TestUsesFailures(t *testing.T) {
 
 func TestGetCommand(t *testing.T) {
 	workflow, err := parseString(`
-		action "a" { uses="./x" runs="a b c" }
-		action "b" { uses="./x" runs=["a", "b", "c"] }
-		action "c" { uses="./x" args="a b c" }
-		action "d" { uses="./x" args=["a", "b", "c"] }
-		action "e" { uses="./x" runs="a b c" args="x y z" }
-		action "f" { uses="./x" runs=["a", "b", "c"] args=["x", "y", "z"] }
+		action "a" { uses="./x" runs="a b c d" }
+		action "b" { uses="./x" runs=["a", "b c", "d"] }
+		action "c" { uses="./x" args="a b c d" }
+		action "d" { uses="./x" args=["a", "b c", "d"] }
+		action "e" { uses="./x" runs="a b c d" args="w x y z" }
+		action "f" { uses="./x" runs=["a", "b c", "d"] args=["w", "x y", "z"] }
 	`)
 	assertParseSuccess(t, err, 6, 0, workflow)
 	a := workflow.GetAction("a")
 	assert.NotNil(t, a)
-	assert.Equal(t, &model.StringCommand{Value: "a b c"}, a.Runs)
+	assert.Equal(t, &model.StringCommand{Value: "a b c d"}, a.Runs)
 	b := workflow.GetAction("b")
 	assert.NotNil(t, b)
-	assert.Equal(t, &model.ListCommand{Values: []string{"a", "b", "c"}}, b.Runs)
+	assert.Equal(t, &model.ListCommand{Values: []string{"a", "b c", "d"}}, b.Runs)
 	c := workflow.GetAction("c")
 	assert.NotNil(t, c)
-	assert.Equal(t, &model.StringCommand{Value: "a b c"}, c.Args)
+	assert.Equal(t, &model.StringCommand{Value: "a b c d"}, c.Args)
 	d := workflow.GetAction("d")
 	assert.NotNil(t, d)
-	assert.Equal(t, &model.ListCommand{Values: []string{"a", "b", "c"}}, d.Args)
+	assert.Equal(t, &model.ListCommand{Values: []string{"a", "b c", "d"}}, d.Args)
 	e := workflow.GetAction("e")
 	assert.NotNil(t, e)
-	assert.Equal(t, &model.StringCommand{Value: "a b c"}, e.Runs)
-	assert.Equal(t, &model.StringCommand{Value: "x y z"}, e.Args)
+	assert.Equal(t, &model.StringCommand{Value: "a b c d"}, e.Runs)
+	assert.Equal(t, &model.StringCommand{Value: "w x y z"}, e.Args)
 	f := workflow.GetAction("f")
 	assert.NotNil(t, f)
-	assert.Equal(t, &model.ListCommand{Values: []string{"a", "b", "c"}}, f.Runs)
-	assert.Equal(t, &model.ListCommand{Values: []string{"x", "y", "z"}}, f.Args)
+	assert.Equal(t, &model.ListCommand{Values: []string{"a", "b c", "d"}}, f.Runs)
+	assert.Equal(t, &model.ListCommand{Values: []string{"w", "x y", "z"}}, f.Args)
 }
 
 func TestGetCommandFailure(t *testing.T) {
