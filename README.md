@@ -21,7 +21,7 @@ config, err := parser.Parse(reader)
 ```
 
 By default, the `Parse` function validates basic syntax, type safety, and
-all dependencies within a `.workflow` file.  It returns a model with a
+all dependencies within a `.workflow` file.  It returns a model with
 arrays of all workflows and actions defined in the file.
 
 If there are any errors, `Parse` returns an error.  System errors are
