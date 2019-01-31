@@ -23,7 +23,7 @@ Please note that this project is released with a [Contributor Code of Conduct][c
 
 Here are a few things you can do that will increase the likelihood of your pull request being accepted:
 
-- Write [effective-go][effective Go].
+- Write [effective Go][effective-go].
 - Run `make fmt` to format your code.
 - Write tests.
 - Keep your change as focused as possible. If there are multiple changes you would like to make that are not dependent upon each other, consider submitting them as separate pull requests.
