@@ -548,8 +548,7 @@ func (ps *parseState) parseActionAttribute(name string, action *model.Action, va
 	case "uses":
 		ps.parseUses(action, val)
 	case "needs":
-		needs, ok := ps.literalToStringArray(val, true)
-		if ok {
+		if needs, ok := ps.literalToStringArray(val, true); ok {
 			action.Needs = needs
 			ps.posMap[&action.Needs] = val
 		}
@@ -562,14 +561,12 @@ func (ps *parseState) parseActionAttribute(name string, action *model.Action, va
 			action.Args = args
 		}
 	case "env":
-		env := ps.literalToStringMap(val)
-		if env != nil {
+		if env := ps.literalToStringMap(val); env != nil {
 			action.Env = env
 		}
 		ps.posMap[&action.Env] = val
 	case "secrets":
-		secrets, ok := ps.literalToStringArray(val, false)
-		if ok {
+		if secrets, ok := ps.literalToStringArray(val, false); ok {
 			action.Secrets = secrets
 			ps.posMap[&action.Secrets] = val
 		}
