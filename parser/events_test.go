@@ -12,15 +12,13 @@ func TestIsAllowedEventType(t *testing.T) {
 		"push",
 		"PUSH",
 		"pull_request",
-		// TODO support filters:
-		//"pull_request.open",
 	}
 
 	for _, s := range allowed {
 		assert.True(t, isAllowedEventType(s), "should allow %q", s)
 	}
 
-	// This is also not exhaustive.
+	// This is also not exhaustive. We want to have this done by universe, after all.
 	notAllowed := []string{
 		"installation",
 		"randommashingofkeyboard",
