@@ -49,11 +49,3 @@ func TestIsMatchingEventType(t *testing.T) {
 		assert.Equal(t, ex.match, IsMatchingEventType(ex.on, ex.hookEventType), "Should on=%q match a hook with event type %q?", ex.on, ex.hookEventType)
 	}
 }
-
-func TestAddAndRemoveEventTypes(t *testing.T) {
-	assert.False(t, IsAllowedEventType("bogus"))
-	AddAllowedEventType("bogus")
-	assert.True(t, IsAllowedEventType("bogus"))
-	RemoveAllowedEventType("bogus")
-	assert.False(t, IsAllowedEventType("bogus"))
-}

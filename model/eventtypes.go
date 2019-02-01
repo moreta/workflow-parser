@@ -45,11 +45,3 @@ var eventTypeWhitelist = map[string]struct{}{
 	"status":                      {},
 	"watch":                       {},
 }
-
-func AddAllowedEventType(s string) {
-	eventTypeWhitelist[s] = struct{}{}
-}
-
-func RemoveAllowedEventType(s string) {
-	delete(eventTypeWhitelist, s)
-}
