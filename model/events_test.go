@@ -30,22 +30,3 @@ func TestIsAllowedEventType(t *testing.T) {
 		assert.False(t, IsAllowedEventType(s), "should not allow %q", s)
 	}
 }
-
-func TestIsMatchingEventType(t *testing.T) {
-	examples := []struct {
-		on            string
-		hookEventType string
-		match         bool
-	}{
-		// hookEventType will always be lower-case.
-		{"PUSH", "push", true},
-		{"push", "push", true},
-		{"blahblah", "push", false},
-		// TODO support filters:
-		//{"pull_request.open", "pull_request", /*???*/ true},
-	}
-
-	for _, ex := range examples {
-		assert.Equal(t, ex.match, IsMatchingEventType(ex.on, ex.hookEventType), "Should on=%q match a hook with event type %q?", ex.on, ex.hookEventType)
-	}
-}
