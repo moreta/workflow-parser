@@ -1,6 +1,6 @@
 [actions]: https://github.com/features/actions/
 [workflow]: https://developer.github.com/actions/creating-workflows/creating-a-new-workflow/
-The GitHub Actions Workflow Parser
+# The GitHub Actions Workflow Parser
 
 This is the [language specification](language.md) and the official parser
 for GitHub Actions [`main.workflow` files][workflow].  It is running in
@@ -9,7 +9,7 @@ production as part of [GitHub Actions][actions].  It is written in Go.
 There are syntax-highlighting configuration files for Vim and Atom, under
 the `syntax/` directory.
 
-# Using the parser
+## Using the parser
 
 To use the parser in your own projects, import it, and call the `Parse`
 function.
@@ -38,13 +38,13 @@ warnings, errors, or fatal errors will work with Actions.
 To suppress warnings or non-fatal errors, use either of the following
 functions as an optional second argument to `Parse`:
 
-```
+```go
 config, err := parser.Parse(reader, parser.WithSuppressWarnings())
 // or 
 config, err := parser.Parse(reader, parser.WithSuppressErrors())
 ```
 
-# Developing the parser
+## Developing the parser
 
 You'll need a copy of go v1.9 or higher.  You might also want a copy of
 `dep`, if you plan to change `Gopkg.toml`.
@@ -66,12 +66,12 @@ If you would like to contribute your work back to the project, please see
 [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 
-# License
+## License
 
 This project is open source, under the [MIT license](LICENSE).
 
 
-# Releases
+## Releases
 
 Active development happens on the `master` branch.  Releases happen by
 tagging commits with `vX.Y.Z`, according to [semantic
