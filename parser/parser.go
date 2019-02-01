@@ -66,12 +66,12 @@ func Parse(reader io.Reader, options ...OptionFunc) (*model.Configuration, error
 	}, nil
 }
 
-// parseAndValidate converts a HCL AST into a parser and validates
+// parseAndValidate converts a HCL AST into a Parser and validates
 // high-level structure.
 // Parameters:
 //  - root - the contents of a .workflow file, as AST
 // Returns:
-//  - a parser structure containing actions and workflow definitions
+//  - a Parser structure containing actions and workflow definitions
 func parseAndValidate(root ast.Node, options ...OptionFunc) *Parser {
 	p := &Parser{
 		posMap: make(map[interface{}]ast.Node),
