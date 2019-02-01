@@ -27,7 +27,7 @@
 
 [[constraint]]
   name = "github.com/hashicorp/hcl"
-  revision = "f17d21ac515f7d18e588d640d52125da67557d67"
+  revision = "481ba8d00bf398f51b211239a0c506e1c0654feb"
   source = "github.com/actions/hcl"
 
 [[constraint]]
