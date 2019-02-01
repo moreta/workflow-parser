@@ -20,10 +20,10 @@ const maxVersion = 0
 const maxSecrets = 100
 
 type Parser struct {
-	Version   int
-	Actions   []*model.Action
-	Workflows []*model.Workflow
-	Errors    ErrorList
+	version   int
+	actions   []*model.Action
+	workflows []*model.Workflow
+	errors    ErrorList
 
 	posMap           map[interface{}]ast.Node
 	suppressSeverity Severity
@@ -51,18 +51,18 @@ func Parse(reader io.Reader, options ...OptionFunc) (*model.Configuration, error
 	}
 
 	p := parseAndValidate(root.Node, options...)
-	if len(p.Errors) > 0 {
+	if len(p.errors) > 0 {
 		return nil, &ParserError{
 			message:   "unable to parse and validate",
-			Errors:    p.Errors,
-			Actions:   p.Actions,
-			Workflows: p.Workflows,
+			Errors:    p.errors,
+			Actions:   p.actions,
+			Workflows: p.workflows,
 		}
 	}
 
 	return &model.Configuration{
-		Actions:   p.Actions,
-		Workflows: p.Workflows,
+		Actions:   p.actions,
+		Workflows: p.workflows,
 	}, nil
 }
 
@@ -83,7 +83,7 @@ func parseAndValidate(root ast.Node, options ...OptionFunc) *Parser {
 
 	p.parseRoot(root)
 	p.validate()
-	p.Errors.sort()
+	p.errors.sort()
 
 	return p
 }
@@ -107,20 +107,20 @@ func uniqStrings(items []string) []string {
 	return ret
 }
 
-// checkCircularDependencies finds loop in the action graph.
+// checkCircularDependencies finds loops in the action graph.
 // It emits a fatal error for each cycle it finds, in the order (top to
 // bottom, left to right) they appear in the .workflow file.
 func (p *Parser) checkCircularDependencies() {
-	// make a map from action name to node ID, which is the index in the p.Actions array
-	// That is, p.Actions[actionmap[X]].Identifier == X
+	// make a map from action name to node ID, which is the index in the p.actions array
+	// That is, p.actions[actionmap[X]].Identifier == X
 	actionmap := make(map[string]graph.NI)
-	for i, action := range p.Actions {
+	for i, action := range p.actions {
 		actionmap[action.Identifier] = graph.NI(i)
 	}
 
 	// make an adjacency list representation of the action dependency graph
-	adjList := make(graph.AdjacencyList, len(p.Actions))
-	for i, action := range p.Actions {
+	adjList := make(graph.AdjacencyList, len(p.actions))
+	for i, action := range p.actions {
 		adjList[i] = make([]graph.NI, 0, len(action.Needs))
 		for _, depName := range action.Needs {
 			if depIdx, ok := actionmap[depName]; ok {
@@ -132,8 +132,8 @@ func (p *Parser) checkCircularDependencies() {
 	// find cycles, and print a fatal error for each one
 	g := graph.Directed{AdjacencyList: adjList}
 	g.Cycles(func(cycle []graph.NI) bool {
-		node := p.posMap[&p.Actions[cycle[len(cycle)-1]].Needs]
-		p.addFatal(node, "Circular dependency on `%s'", p.Actions[cycle[0]].Identifier)
+		node := p.posMap[&p.actions[cycle[len(cycle)-1]].Needs]
+		p.addFatal(node, "Circular dependency on `%s'", p.actions[cycle[0]].Identifier)
 		return true
 	})
 }
@@ -142,7 +142,7 @@ func (p *Parser) checkCircularDependencies() {
 // have structural errors
 func (p *Parser) checkActions() {
 	secrets := make(map[string]bool)
-	for _, t := range p.Actions {
+	for _, t := range p.actions {
 		// Ensure the Action has a `uses` attribute
 		if t.Uses == nil {
 			p.addError(p.posMap[t], "Action `%s' must have a `uses' attribute", t.Identifier)
@@ -196,8 +196,8 @@ func (p *Parser) checkEnvironmentVariable(key string, node ast.Node) {
 // checkFlows appends an error if any workflows are syntactically correct but
 // have structural errors
 func (p *Parser) checkFlows() {
-	actionmap := makeActionMap(p.Actions)
-	for _, f := range p.Workflows {
+	actionmap := makeActionMap(p.actions)
+	for _, f := range p.workflows {
 		// make sure there's an `on` attribute
 		if f.On == "" {
 			p.addError(p.posMap[f], "Workflow `%s' must have an `on' attribute", f.Identifier)
@@ -229,17 +229,17 @@ func makeActionMap(actions []*model.Action) map[string]*model.Action {
 // Fill in Action dependencies for all actions based on explicit dependencies
 // declarations.
 //
-// p.Actions is an array of Action objects, as parsed.  The Action objects in
+// p.actions is an array of Action objects, as parsed.  The Action objects in
 // this array are mutated, by setting Action.dependencies for each.
 func (p *Parser) analyzeDependencies() {
-	actionmap := makeActionMap(p.Actions)
-	for _, action := range p.Actions {
+	actionmap := makeActionMap(p.actions)
+	for _, action := range p.actions {
 		// analyze explicit dependencies for each "needs" keyword
 		p.analyzeNeeds(action, actionmap)
 	}
 
 	// uniq all the dependencies lists
-	for _, action := range p.Actions {
+	for _, action := range p.actions {
 		if len(action.Needs) >= 2 {
 			action.Needs = uniqStrings(action.Needs)
 		}
@@ -382,8 +382,8 @@ func (p *Parser) literalCast(node ast.Node, t token.Type) interface{} {
 	return literal.Token.Value()
 }
 
-// parseRoot parses the root of the AST, filling in p.Version, p.Actions,
-// and p.Workflows.
+// parseRoot parses the root of the AST, filling in p.version, p.actions,
+// and p.workflows.
 func (p *Parser) parseRoot(node ast.Node) {
 	objectList, ok := node.(*ast.ObjectList)
 	if !ok {
@@ -393,8 +393,8 @@ func (p *Parser) parseRoot(node ast.Node) {
 		return
 	}
 
-	p.Actions = make([]*model.Action, 0, len(objectList.Items))
-	p.Workflows = make([]*model.Workflow, 0, len(objectList.Items))
+	p.actions = make([]*model.Action, 0, len(objectList.Items))
+	p.workflows = make([]*model.Workflow, 0, len(objectList.Items))
 	identifiers := make(map[string]bool)
 	for idx, item := range objectList.Items {
 		if item.Assign.IsValid() {
@@ -406,7 +406,7 @@ func (p *Parser) parseRoot(node ast.Node) {
 }
 
 // parseBlock parses a single, top-level "action" or "workflow" block,
-// appending it to p.Actions or p.Workflows as appropriate.
+// appending it to p.actions or p.workflows as appropriate.
 func (p *Parser) parseBlock(item *ast.ObjectItem, identifiers map[string]bool) {
 	if len(item.Keys) != 2 {
 		p.addError(item, "Invalid toplevel declaration")
@@ -421,13 +421,13 @@ func (p *Parser) parseBlock(item *ast.ObjectItem, identifiers map[string]bool) {
 		action := p.actionifyItem(item)
 		if action != nil {
 			id = action.Identifier
-			p.Actions = append(p.Actions, action)
+			p.actions = append(p.actions, action)
 		}
 	case "workflow":
 		workflow := p.workflowifyItem(item)
 		if workflow != nil {
 			id = workflow.Identifier
-			p.Workflows = append(p.Workflows, workflow)
+			p.workflows = append(p.workflows, workflow)
 		}
 	default:
 		p.addError(item, "Invalid toplevel keyword, `%s'", cmd)
@@ -442,7 +442,7 @@ func (p *Parser) parseBlock(item *ast.ObjectItem, identifiers map[string]bool) {
 }
 
 // parseVersion parses a top-level `version=N` statement, filling in
-// p.Version.
+// p.version.
 func (p *Parser) parseVersion(idx int, item *ast.ObjectItem) {
 	if len(item.Keys) != 1 || p.identString(item.Keys[0].Token) != "version" {
 		// not a valid `version` declaration
@@ -461,7 +461,7 @@ func (p *Parser) parseVersion(idx int, item *ast.ObjectItem) {
 		p.addError(item.Val, "`version = %d` is not supported", version)
 		return
 	}
-	p.Version = int(version)
+	p.version = int(version)
 }
 
 // parseIdentifier parses the double-quoted identifier (name) for a
@@ -733,31 +733,31 @@ func (p *Parser) checkAssignmentsOnly(objectList *ast.ObjectList, actionID strin
 
 func (p *Parser) addWarning(node ast.Node, format string, a ...interface{}) {
 	if p.suppressSeverity < WARNING {
-		p.Errors = append(p.Errors, newWarning(posFromNode(node), format, a...))
+		p.errors = append(p.errors, newWarning(posFromNode(node), format, a...))
 	}
 }
 
 func (p *Parser) addError(node ast.Node, format string, a ...interface{}) {
 	if p.suppressSeverity < ERROR {
-		p.Errors = append(p.Errors, newError(posFromNode(node), format, a...))
+		p.errors = append(p.errors, newError(posFromNode(node), format, a...))
 	}
 }
 
 func (p *Parser) addErrorFromToken(t token.Token, format string, a ...interface{}) {
 	if p.suppressSeverity < ERROR {
-		p.Errors = append(p.Errors, newError(posFromToken(t), format, a...))
+		p.errors = append(p.errors, newError(posFromToken(t), format, a...))
 	}
 }
 
 func (p *Parser) addErrorFromObjectItem(objectItem *ast.ObjectItem, format string, a ...interface{}) {
 	if p.suppressSeverity < ERROR {
-		p.Errors = append(p.Errors, newError(posFromObjectItem(objectItem), format, a...))
+		p.errors = append(p.errors, newError(posFromObjectItem(objectItem), format, a...))
 	}
 }
 
 func (p *Parser) addFatal(node ast.Node, format string, a ...interface{}) {
 	if p.suppressSeverity < FATAL {
-		p.Errors = append(p.Errors, newFatal(posFromNode(node), format, a...))
+		p.errors = append(p.errors, newFatal(posFromNode(node), format, a...))
 	}
 }
 
