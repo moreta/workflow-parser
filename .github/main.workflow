@@ -4,5 +4,5 @@ workflow "on push" {
 }
 
 action "go-ci" {
-	uses = "piki/actions-go-builder@master"
+	uses = "piki/golang-action@goodies"
 }
