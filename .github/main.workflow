@@ -4,6 +4,5 @@ workflow "on push" {
 }
 
 action "go-ci" {
-	uses = "docker://golang:latest"
-	runs = "./script/cibuild"
+	uses = "piki/actions-go-builder@master"
 }
