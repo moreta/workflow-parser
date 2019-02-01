@@ -20,7 +20,7 @@ func TestIsAllowedEventType(t *testing.T) {
 		assert.True(t, isAllowedEventType(s), "should allow %q", s)
 	}
 
-	// This is also not exhaustive. We want to have this done by universe, after all.
+	// This is also not exhaustive.
 	notAllowed := []string{
 		"installation",
 		"randommashingofkeyboard",
