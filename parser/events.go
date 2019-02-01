@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-// IsAllowedEventType returns true if the event type is supported.
+// isAllowedEventType returns true if the event type is supported.
 func isAllowedEventType(eventType string) bool {
 	_, ok := eventTypeWhitelist[strings.ToLower(eventType)]
 	return ok
