@@ -1,4 +1,4 @@
-package model
+package parser
 
 import (
 	"testing"
@@ -17,7 +17,7 @@ func TestIsAllowedEventType(t *testing.T) {
 	}
 
 	for _, s := range allowed {
-		assert.True(t, IsAllowedEventType(s), "should allow %q", s)
+		assert.True(t, isAllowedEventType(s), "should allow %q", s)
 	}
 
 	// This is also not exhaustive. We want to have this done by universe, after all.
@@ -27,6 +27,6 @@ func TestIsAllowedEventType(t *testing.T) {
 	}
 
 	for _, s := range notAllowed {
-		assert.False(t, IsAllowedEventType(s), "should not allow %q", s)
+		assert.False(t, isAllowedEventType(s), "should not allow %q", s)
 	}
 }

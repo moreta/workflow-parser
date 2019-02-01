@@ -202,7 +202,7 @@ func (ps *parseState) checkFlows() {
 		if f.On == "" {
 			ps.addError(ps.posMap[f], "Workflow `%s' must have an `on' attribute", f.Identifier)
 			// continue, checking other workflows
-		} else if !model.IsAllowedEventType(f.On) {
+		} else if !isAllowedEventType(f.On) {
 			ps.addError(ps.posMap[&f.On], "Workflow `%s' has unknown `on' value `%s'", f.Identifier, f.On)
 			// continue, checking other workflows
 		}

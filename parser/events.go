@@ -1,11 +1,11 @@
-package model
+package parser
 
 import (
 	"strings"
 )
 
 // IsAllowedEventType returns true if the event type is supported.
-func IsAllowedEventType(eventType string) bool {
+func isAllowedEventType(eventType string) bool {
 	_, ok := eventTypeWhitelist[strings.ToLower(eventType)]
 	return ok
 }
