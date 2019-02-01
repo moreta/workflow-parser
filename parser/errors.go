@@ -113,8 +113,8 @@ type Severity int
 // A caller intending to execute the file might check for
 // `errors.FirstError(parser.WARNING)`, while a caller intending to
 // display the file might check for `errors.FirstError(parser.FATAL)`.
-func (errors ErrorList) FirstError(severity Severity) error {
-	for _, e := range errors {
+func (p *ParserError) FirstError(severity Severity) error {
+	for _, e := range p.Errors {
 		if e.Severity >= severity {
 			return e
 		}
