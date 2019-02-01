@@ -12,7 +12,7 @@ import (
 
 type ParserError struct {
 	message   string
-	Errors    ErrorList
+	Errors    []*Error
 	Actions   []*model.Action
 	Workflows []*model.Workflow
 }
@@ -122,15 +122,15 @@ func (p *ParserError) FirstError(severity Severity) error {
 	return nil
 }
 
-type ErrorList []*Error
+type errorList []*Error
 
-func (a ErrorList) Len() int           { return len(a) }
-func (a ErrorList) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ErrorList) Less(i, j int) bool { return a[i].Pos.Line < a[j].Pos.Line }
+func (a errorList) Len() int           { return len(a) }
+func (a errorList) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a errorList) Less(i, j int) bool { return a[i].Pos.Line < a[j].Pos.Line }
 
 // sortErrors sorts the errors reported by the parser.  Do this after
 // parsing is complete.  The sort is stable, so order is preserved within
 // a single line: left to right, syntax errors before validation errors.
-func (errors ErrorList) sort() {
+func (errors errorList) sort() {
 	sort.Stable(errors)
 }

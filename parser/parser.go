@@ -23,7 +23,7 @@ type Parser struct {
 	version   int
 	actions   []*model.Action
 	workflows []*model.Workflow
-	errors    ErrorList
+	errors    errorList
 
 	posMap           map[interface{}]ast.Node
 	suppressSeverity Severity
@@ -41,7 +41,7 @@ func Parse(reader io.Reader, options ...OptionFunc) (*model.Configuration, error
 	if err != nil {
 		if pe, ok := err.(*hclparser.PosError); ok {
 			pos := ErrorPos{File: pe.Pos.Filename, Line: pe.Pos.Line, Column: pe.Pos.Column}
-			errors := ErrorList{newFatal(pos, pe.Err.Error())}
+			errors := errorList{newFatal(pos, pe.Err.Error())}
 			return nil, &ParserError{
 				message: "unable to parse",
 				Errors:  errors,
