@@ -12,7 +12,7 @@ import (
 
 type ParserError struct {
 	message   string
-	Errors    []*Error
+	Errors    []*ParseError
 	Actions   []*model.Action
 	Workflows []*model.Workflow
 }
@@ -42,12 +42,12 @@ func (p *ParserError) FirstError(severity Severity) error {
 	return nil
 }
 
-// Error represents an error identified by the parser, either syntactic
+// ParseError represents an error identified by the parser, either syntactic
 // (HCL) or semantic (.workflow) in nature.  There are fields for location
 // (File, Line, Column), severity, and base error string.  The `Error()`
 // function on this type concatenates whatever bits of the location are
 // available with the message.  The severity is only used for filtering.
-type Error struct {
+type ParseError struct {
 	message  string
 	Pos      ErrorPos
 	Severity Severity
@@ -63,8 +63,8 @@ type ErrorPos struct {
 
 // newFatal creates a new error at the FATAL level, indicating that the
 // file is so broken it should not be displayed.
-func newFatal(pos ErrorPos, format string, a ...interface{}) *Error {
-	return &Error{
+func newFatal(pos ErrorPos, format string, a ...interface{}) *ParseError {
+	return &ParseError{
 		message:  fmt.Sprintf(format, a...),
 		Pos:      pos,
 		Severity: FATAL,
@@ -73,8 +73,8 @@ func newFatal(pos ErrorPos, format string, a ...interface{}) *Error {
 
 // newError creates a new error at the ERROR level, indicating that the
 // file can be displayed but cannot be run.
-func newError(pos ErrorPos, format string, a ...interface{}) *Error {
-	return &Error{
+func newError(pos ErrorPos, format string, a ...interface{}) *ParseError {
+	return &ParseError{
 		message:  fmt.Sprintf(format, a...),
 		Pos:      pos,
 		Severity: ERROR,
@@ -83,15 +83,15 @@ func newError(pos ErrorPos, format string, a ...interface{}) *Error {
 
 // newWarning creates a new error at the WARNING level, indicating that
 // the file might be runnable but might not execute as intended.
-func newWarning(pos ErrorPos, format string, a ...interface{}) *Error {
-	return &Error{
+func newWarning(pos ErrorPos, format string, a ...interface{}) *ParseError {
+	return &ParseError{
 		message:  fmt.Sprintf(format, a...),
 		Pos:      pos,
 		Severity: WARNING,
 	}
 }
 
-func (e *Error) Error() string {
+func (e *ParseError) Error() string {
 	var sb strings.Builder
 	if e.Pos.Line != 0 {
 		sb.WriteString("Line ")                  // nolint: errcheck
@@ -122,7 +122,7 @@ const (
 // workflow file.  See the comments for WARNING, ERROR, and FATAL, above.
 type Severity int
 
-type errorList []*Error
+type errorList []*ParseError
 
 func (a errorList) Len() int           { return len(a) }
 func (a errorList) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
