@@ -42,7 +42,7 @@ func Parse(reader io.Reader, options ...OptionFunc) (*model.Configuration, error
 		if pe, ok := err.(*hclparser.PosError); ok {
 			pos := ErrorPos{File: pe.Pos.Filename, Line: pe.Pos.Line, Column: pe.Pos.Column}
 			errors := errorList{newFatal(pos, pe.Err.Error())}
-			return nil, &ParserError{
+			return nil, &Error{
 				message: "unable to parse",
 				Errors:  errors,
 			}
@@ -52,7 +52,7 @@ func Parse(reader io.Reader, options ...OptionFunc) (*model.Configuration, error
 
 	p := parseAndValidate(root.Node, options...)
 	if len(p.errors) > 0 {
-		return nil, &ParserError{
+		return nil, &Error{
 			message:   "unable to parse and validate",
 			Errors:    p.errors,
 			Actions:   p.actions,

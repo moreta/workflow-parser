@@ -10,19 +10,19 @@ import (
 	"github.com/actions/workflow-parser/model"
 )
 
-type ParserError struct {
+type Error struct {
 	message   string
 	Errors    []*ParseError
 	Actions   []*model.Action
 	Workflows []*model.Workflow
 }
 
-func (p *ParserError) Error() string {
+func (e *Error) Error() string {
 	buffer := bytes.NewBuffer(nil)
-	buffer.WriteString(p.message)
-	for _, e := range p.Errors {
+	buffer.WriteString(e.message)
+	for _, pe := range e.Errors {
 		buffer.WriteString("\n  ")
-		buffer.WriteString(e.Error())
+		buffer.WriteString(pe.Error())
 	}
 	return buffer.String()
 }
@@ -33,10 +33,10 @@ func (p *ParserError) Error() string {
 // A caller intending to execute the file might check for
 // `errors.FirstError(parser.WARNING)`, while a caller intending to
 // display the file might check for `errors.FirstError(parser.FATAL)`.
-func (p *ParserError) FirstError(severity Severity) error {
-	for _, e := range p.Errors {
-		if e.Severity >= severity {
-			return e
+func (e *Error) FirstError(severity Severity) error {
+	for _, pe := range e.Errors {
+		if pe.Severity >= severity {
+			return pe
 		}
 	}
 	return nil

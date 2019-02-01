@@ -504,12 +504,12 @@ func TestUsesDuplicatesCheck(t *testing.T) {
 func TestCommandDuplicatesCheck(t *testing.T) {
 	workflow, err := parseString(`action "a" { uses="./x" runs="x" runs="y" }`)
 	assertParseError(t, err, 1, 0, workflow, "`runs' redefined in action `a'")
-	if pe, ok := err.(*ParserError); ok {
+	if pe, ok := err.(*Error); ok {
 		require.Equal(t, &model.StringCommand{Value: "y"}, pe.Actions[0].Runs)
 	}
 	workflow, err = parseString(`action "a" { uses="./x" args="x" args="y" }`)
 	assertParseError(t, err, 1, 0, workflow, "`args' redefined in action `a'")
-	if pe, ok := err.(*ParserError); ok {
+	if pe, ok := err.(*Error); ok {
 		require.Equal(t, &model.StringCommand{Value: "y"}, pe.Actions[0].Args)
 	}
 	workflow, err = parseString(`action "a" { uses="./x" runs="x" runs=17 }`)
@@ -517,7 +517,7 @@ func TestCommandDuplicatesCheck(t *testing.T) {
 		"`runs' redefined in action `a'",
 		"expected string, got number",
 		"the `runs' attribute must be a string or a list")
-	if pe, ok := err.(*ParserError); ok {
+	if pe, ok := err.(*Error); ok {
 		require.Equal(t, &model.StringCommand{Value: "x"}, pe.Actions[0].Runs)
 	}
 }
@@ -699,8 +699,8 @@ func TestMultilineErrors(t *testing.T) {
 		"  Line 7: The `uses' attribute must be a path, a Docker image, or owner/repo@ref"
 	assert.Equal(t, expect, err.Error())
 
-	require.IsType(t, &ParserError{}, err)
-	pe := err.(*ParserError)
+	require.IsType(t, &Error{}, err)
+	pe := err.(*Error)
 	assert.Len(t, pe.Errors, 4)
 }
 
@@ -718,7 +718,7 @@ func assertParseError(t *testing.T, err error, nactions int, nflows int, workflo
 	require.Error(t, err)
 	assert.Nil(t, workflow)
 
-	if pe, ok := err.(*ParserError); ok {
+	if pe, ok := err.(*Error); ok {
 		assert.Equal(t, nactions, len(pe.Actions), "actions")
 		assert.Equal(t, nflows, len(pe.Workflows), "workflows")
 
@@ -744,7 +744,7 @@ func assertSyntaxError(t *testing.T, err error, workflow *model.Configuration, e
 	assert.Error(t, err)
 	require.Nil(t, workflow)
 
-	if pe, ok := err.(*ParserError); ok {
+	if pe, ok := err.(*Error); ok {
 		assert.Nil(t, pe.Actions)
 		assert.Nil(t, pe.Workflows)
 		require.Len(t, pe.Errors, 1, "syntax errors should yield only one error")
@@ -761,8 +761,8 @@ func parseString(workflowFile string, options ...OptionFunc) (*model.Configurati
 	return Parse(strings.NewReader(workflowFile), options...)
 }
 
-func extractParserError(t *testing.T, err error) *ParserError {
-	if pe, ok := err.(*ParserError); ok {
+func extractParserError(t *testing.T, err error) *Error {
+	if pe, ok := err.(*Error); ok {
 		return pe
 	}
 

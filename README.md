@@ -25,8 +25,8 @@ all dependencies within a `.workflow` file.  It returns a model with
 arrays of all workflows and actions defined in the file.
 
 If there are any errors, `Parse` returns an error.  System errors are
-returned as a generic `Error` class, while problems in the file are
-returned as a `ParserError`.  The `ParserError` struct has an array of
+returned as a generic `error` class, while problems in the file are
+returned as a `parser.Error`.  The `parser.Error` struct has an array of
 errors, each indicating a severity and a position in the file.
 
 Warnings indicate code that might get ignored or misinterpreted.  Errors
@@ -40,7 +40,7 @@ functions as an optional second argument to `Parse`:
 
 ```
 config, err := parser.Parse(reader, parser.WithSuppressWarnings())
-// or 
+// or
 config, err := parser.Parse(reader, parser.WithSuppressErrors())
 ```
 
