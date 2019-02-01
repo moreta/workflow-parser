@@ -27,6 +27,21 @@ func (p *ParserError) Error() string {
 	return buffer.String()
 }
 
+// FirstError searches a Configuration for the first error at or above a
+// given severity level.  Checking the return value against nil is a good
+// way to see if the file has any errors at or above the given severity.
+// A caller intending to execute the file might check for
+// `errors.FirstError(parser.WARNING)`, while a caller intending to
+// display the file might check for `errors.FirstError(parser.FATAL)`.
+func (p *ParserError) FirstError(severity Severity) error {
+	for _, e := range p.Errors {
+		if e.Severity >= severity {
+			return e
+		}
+	}
+	return nil
+}
+
 // Error represents an error identified by the parser, either syntactic
 // (HCL) or semantic (.workflow) in nature.  There are fields for location
 // (File, Line, Column), severity, and base error string.  The `Error()`
@@ -106,21 +121,6 @@ const (
 // Severity represents the level of an error encountered while parsing a
 // workflow file.  See the comments for WARNING, ERROR, and FATAL, above.
 type Severity int
-
-// FirstError searches a Configuration for the first error at or above a
-// given severity level.  Checking the return value against nil is a good
-// way to see if the file has any errors at or above the given severity.
-// A caller intending to execute the file might check for
-// `errors.FirstError(parser.WARNING)`, while a caller intending to
-// display the file might check for `errors.FirstError(parser.FATAL)`.
-func (p *ParserError) FirstError(severity Severity) error {
-	for _, e := range p.Errors {
-		if e.Severity >= severity {
-			return e
-		}
-	}
-	return nil
-}
 
 type errorList []*Error
 
