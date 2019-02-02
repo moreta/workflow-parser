@@ -1,3 +1,5 @@
+'use strict'
+
 exports.lex = lex
 
 function countNewlines(str, start, end) {

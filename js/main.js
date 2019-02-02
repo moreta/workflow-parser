@@ -1,3 +1,5 @@
+'use strict'
+
 const fs = require('fs')
 const lexer = require('./lexer')
 const parser = require('./parser')

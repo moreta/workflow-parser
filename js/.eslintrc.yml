@@ -1,7 +1,12 @@
 extends:
   - plugin:github/es6
   - plugin:github/node
+parserOptions:
+  sourceType: script
 rules:
+  strict:
+    - error
+    - global
   no-unused-vars:
     - error
     - argsIgnorePattern: '^_'

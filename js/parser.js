@@ -1,3 +1,5 @@
+'use strict'
+
 exports.parseWorkflowFile = parseWorkflowFile
 
 function parseWorkflowFile(tokens, ofs) {
