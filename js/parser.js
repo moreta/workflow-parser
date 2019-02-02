@@ -28,18 +28,10 @@ function parseWorkflowFile(tokens, ofs) {
 function debugParse(_label, _tokens, _ofs) {
   // console.log(
   //   `parse${_label}: ofs=${_ofs[0]} next=${JSON.stringify(
-  //     slice(_tokens, _ofs[0], 8)
+  //     _tokens.slice(_ofs[0], _ofs[0] + 8)
   //   )}`
   // );
 }
-
-// function slice(arr, start, count) {
-//   const ret = [];
-//   for (let i = 0; i < count && start + i < arr.length; i++) {
-//     ret.push(arr[start + i]);
-//   }
-//   return ret;
-// }
 
 function parseVersion(tokens, ofs) {
   debugParse("Version", tokens, ofs);
