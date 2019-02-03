@@ -156,15 +156,6 @@ function parseObject(tokens, ofs) {
   return ret
 }
 
-// function parseStringOrArray(tokens, ofs) {
-//   debugParse("StringOrArray", tokens, ofs);
-//   if (isa(tokens[ofs[0]], "STRING")) {
-//     ofs[0]++;
-//     return [tokens[ofs[0] - 1][1]];
-//   }
-//   return parseArray(tokens, ofs);
-// }
-
 function eq(a1, a2) {
   if (!a1 || !a2) return false
   if (a1.length !== 3 || a2.length !== 2) return false
