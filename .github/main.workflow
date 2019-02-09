@@ -4,6 +4,5 @@ workflow "on push" {
 }
 
 action "go-ci" {
-	uses = "docker://golang:latest"
-	runs = "./script/cibuild"
+	uses = "cedrickring/golang-action@92b89ca0095ea0972cefaaaf1d48966d7c958553"
 }
